@@ -151,7 +151,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a02-office-inbox-inbox-card-shows-subsidy-request.png
 - Likely layer: frontend, `frontend/src/pages/office/OfficePage.tsx` EnquiriesTab card.
 - PDF requirement: R1
-- Status: open
+- Status: fixed in `fix(BUG-009): show subsidy requests in the inbox`
 
 ### BUG-010 [minor] Survey form has no recommended system size field
 - Role / screen / URL: tech1 / Field survey / `/technician/surveys/8`

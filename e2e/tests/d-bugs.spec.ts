@@ -81,3 +81,10 @@ test('BUG-008 public pages have no staff sidebar or session request', async ({ p
   await expect(page.locator('aside[aria-label="Main navigation"]')).toHaveCount(0)
   expect(requests).toEqual([])
 })
+
+test('BUG-009 inbox shows requested subsidy', async ({ page }) => {
+  await openAs(page, 'office', '/office/enquiries')
+  await page.getByLabel('Search enquiries').fill('9123456780')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect(page.locator('.record-card').filter({ hasText: 'Test Customer' })).toContainText('Subsidy requested')
+})
