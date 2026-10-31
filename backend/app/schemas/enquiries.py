@@ -1,10 +1,10 @@
 """Request and response schemas for customer enquiries."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.enums import CustomerType, EnquirySource, EnquiryStatus, SystemType
 from app.core.validators import normalize_email, normalize_phone, validate_pincode
@@ -159,20 +159,9 @@ class EnquiryRead(BaseModel):
     qualified_by: int | None = None
     qualified_at: datetime | None = None
     close_reason: str | None = None
+    is_overdue: bool = False
     created_at: datetime
     updated_at: datetime
-
-    @computed_field(return_type=bool)
-    @property
-    def is_overdue(self) -> bool:
-        """A new enquiry is overdue when its creation time is over 24 hours old."""
-        created_at = self.created_at
-        if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=UTC)
-        return (
-            self.status == EnquiryStatus.NEW
-            and created_at < datetime.now(UTC) - timedelta(hours=24)
-        )
 
 
 class EnquiryPublicReceipt(BaseModel):

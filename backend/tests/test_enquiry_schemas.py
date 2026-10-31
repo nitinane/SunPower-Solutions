@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -81,7 +81,7 @@ def test_qualification_and_close_action_constraints() -> None:
         EnquiryClose(reason="  ")
 
 
-def test_enquiry_read_computes_overdue_and_excludes_private_key() -> None:
+def test_enquiry_read_uses_service_overdue_value_and_excludes_private_key() -> None:
     now = datetime.now(UTC)
     payload = {
         "id": 12,
@@ -109,10 +109,13 @@ def test_enquiry_read_computes_overdue_and_excludes_private_key() -> None:
         "qualified_by": None,
         "qualified_at": None,
         "close_reason": None,
-        "created_at": now - timedelta(hours=25),
+        "created_at": now,
         "updated_at": now,
         "idempotency_key": "must-not-be-exposed",
     }
+    schema = EnquiryRead.model_validate(payload)
+    assert schema.is_overdue is False
+    payload["is_overdue"] = True
     schema = EnquiryRead.model_validate(payload)
     assert schema.is_overdue is True
     assert "idempotency_key" not in schema.model_dump()
