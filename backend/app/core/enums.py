@@ -262,6 +262,15 @@ class SubsidyStatus(StrEnum):
     PAID = "paid"
 
 
+class SubsidyDocType(StrEnum):
+    ELECTRICITY_BILL = "electricity_bill"
+    ID_PROOF = "id_proof"                    # received yes/no only, never the ID number
+    BANK_DETAILS = "bank_details"
+    ROOF_PHOTOS = "roof_photos"
+    NET_METER_APPLICATION = "net_meter_application"
+    INSTALLATION_CERTIFICATE = "installation_certificate"
+
+
 class PayoutStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -321,6 +330,7 @@ ALL_ENUMS: dict[str, type[StrEnum]] = {
     "charge_type": ChargeType,
     "non_product_charge_type": NonProductChargeType,
     "subsidy_status": SubsidyStatus,
+    "subsidy_doc_type": SubsidyDocType,
     "payout_status": PayoutStatus,
     "evidence_content_type": EvidenceContentType,
     "survey_review_required_status": SurveyReviewRequiredStatus,

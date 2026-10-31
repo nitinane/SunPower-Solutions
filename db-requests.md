@@ -18,6 +18,16 @@ _(none)_
 
 ## Done
 
+- P2-3 subsidy + pay, migration `feb61f06aa83` (upgrade, downgrade, upgrade + `alembic check` clean):
+  `subsidy_applications` + `applied_on`, `inspected_on`, `sanctioned_on`, `disbursed_on` DATE, `disbursed_amount` NUMERIC(12,2),
+  `rejection_reason`, `notes` TEXT; `order_id` UNIQUE; `requested_amount` default 0; CHECK `approved_not_above_requested`
+  replaced by `disbursed_within_sanctioned` (0 < disbursed <= approved). Spec `sanctioned_amount` -> existing `approved_amount`.
+  New `subsidy_documents (application_id FK CASCADE, doc_type CHECK, received, received_on, storage_key UNIQUE NULL,
+  content_type; UNIQUE (application_id, doc_type))`. New `pay_runs (month CHAR(7) UNIQUE + format CHECK, status
+  PayoutStatus, paid_on, payment_reference, created_by)`; `pay_run_lines (pay_run_id FK CASCADE, technician_id,
+  install_hours, repair_hours, rate, install_amount, repair_amount, amount; UNIQUE (pay_run_id, technician_id))`.
+  New enum `SubsidyDocType`. Legacy `technician_payments` and `subsidy_applications.documents` JSONB left unused.
+
 - P2-2 invoices, migration `c974fad1ffda` (upgrade, downgrade, upgrade + `alembic check` clean):
   `invoices` + `customer_id` FK NOT NULL, `kind` (order/service), `financial_year` VARCHAR(7), `place_of_supply_state`,
   `cgst`/`sgst`/`igst` NUMERIC(12,2), `created_by`; `order_id` / `ticket_id` now UNIQUE (replaced the plain indexes);

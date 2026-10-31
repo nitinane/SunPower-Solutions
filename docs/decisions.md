@@ -65,3 +65,15 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - POST /orders/{id}/invoice: allowed when the order is delivered, installed or completed (all are "after delivery"); returns 201 when created, 200 when it already existed.
 - COMPANY_GSTIN default is a placeholder (`36AAAAA0000A1Z5`) and must be replaced in production `.env`.
 - 409 code: ORDER_NOT_DELIVERED.
+- subsidy statuses: DOCUMENTS_PENDING -> `draft`, APPLIED -> `submitted`, INSPECTED -> `under_review`, SANCTIONED -> `approved`, DISBURSED -> `paid`, REJECTED -> `rejected` because same meaning; `documents_collected` unused. The API `to_status` takes these DB names.
+- subsidy sanctioned_amount: stored in existing `approved_amount`; the old "approved <= requested" CHECK was dropped because the requested amount is unknown (defaults to 0) and the government sets the sanctioned figure.
+- subsidy scheme_name (NOT NULL): fixed "Rooftop solar subsidy" because the spec has one scheme.
+- subsidy documents: new `subsidy_documents` table instead of the old `documents` JSONB because the spec wants one row per document with a UNIQUE pair; uploading a file also marks it received.
+- subsidy days_in_status: counted from the step date (applied_on / inspected_on / ...), `created_at` for draft and `updated_at` for rejected, because there is no status-changed column.
+- subsidy advance: `date` may not be in the future; REJECTED allowed from any step before paid (not from rejected); document changes blocked (409 SUBSIDY_CLOSED) once paid or rejected; duplicate application number -> 409 APPLICATION_NUMBER_TAKEN.
+- subsidy file upload: 5 MB, JPEG/PNG/WEBP/PDF by magic bytes, random storage key (same as installation photos); no download endpoint because the spec lists none.
+- pay run status: draft -> `PayoutStatus.PENDING`, paid -> `PAID` because same meaning.
+- repair pay: summed from `ticket_charges` labour rows (one per resolved visit, written at resolve time) by the ticket `assigned_to`, because `support_tickets.labour_hours` is cumulative across reopened visits and would pay a reopened ticket twice.
+- pay lines also store `install_amount` / `repair_amount`; `rate` = the technician current hourly rate (repairs); install amounts use each job row snapshot rate, rounded per row.
+- POST /pay-runs returns 201 when created, 200 when a draft is recalculated; GET /me/pay -> 404 when no run exists for that month, `line: null` when the technician has nothing in it.
+- 409 codes: INVALID_SUBSIDY_STEP, DOCUMENTS_MISSING, INSTALLATION_NOT_COMPLETED, SUBSIDY_EXISTS, SUBSIDY_CLOSED, APPLICATION_NUMBER_TAKEN, PAY_RUN_LOCKED.

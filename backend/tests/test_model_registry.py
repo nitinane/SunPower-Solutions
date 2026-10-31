@@ -31,6 +31,9 @@ EXPECTED_TABLES = {
     "ticket_work_logs",
     "subsidy_applications",
     "technician_payments",
+    "subsidy_documents",
+    "pay_runs",
+    "pay_run_lines",
     "audit_log",
     "dashboard_share_links",
 }

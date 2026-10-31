@@ -270,3 +270,58 @@ Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PER
 - `POST /dispatches/{id}/deliver` now also creates the order's invoice in the same transaction.
 - `POST /tickets/{id}/confirm` with `confirmed: true` now also creates a service invoice when the repair is not under warranty and its total > 0.
 - No update or delete endpoints exist for invoices.
+
+## P2-3
+
+### Shared shapes
+- Subsidy statuses (DB names): `draft` (documents pending) -> `submitted` (applied) -> `under_review` (inspected) -> `approved` (sanctioned) -> `paid` (disbursed); `rejected` from any step before `paid`.
+- Document types: `electricity_bill`, `id_proof`, `bank_details`, `roof_photos`, `net_meter_application`, `installation_certificate`.
+- `SubsidyRead`: `id`, `order_id`, `order_number`, `customer_name`, `status`, `application_number`, `applied_on`, `inspected_on`, `sanctioned_amount`, `sanctioned_on`, `disbursed_amount`, `disbursed_on`, `rejection_reason`, `notes`, `documents: [{doc_type, received, received_on, has_file}]`, `missing_documents: [doc_type]`, `days_in_status`, `created_at`.
+- `SubsidyListItem`: `id`, `order_id`, `order_number`, `customer_name`, `status`, `application_number`, `missing_document_count`, `days_in_status`.
+- `PayRunSummary`: `id`, `month` (`YYYY-MM`), `status` (`pending` = draft | `paid`), `paid_on`, `payment_reference`, `technician_count`, `total_amount`.
+- `PayRunRead` = `PayRunSummary` + `lines: [PayLine]`.
+- `PayLine`: `technician_id`, `technician_name`, `install_hours`, `repair_hours`, `rate`, `install_amount`, `repair_amount`, `amount`, `jobs: [{job_id, order_number, hours, hourly_rate, amount}]`, `tickets: [{ticket_id, ticket_number, hours}]`.
+
+### GET /subsidies
+- Roles: office, director. Query: `status` (optional), `page`, `page_size` (default 20, max 100).
+- Response 200: `Page[SubsidyListItem]`, newest first.
+
+### GET /subsidies/{id}
+- Roles: office, director. Response 200 `SubsidyRead`. Errors: 404.
+
+### POST /orders/{id}/subsidy
+- Roles: office, director. No body. Creates the application (`draft`) with all 6 document rows.
+- Response 201 `SubsidyRead`. Errors: 404; 409 `SUBSIDY_EXISTS`.
+
+### PATCH /subsidies/{id}/documents/{doc_type}
+- Roles: office, director. Body `{received: bool}`.
+- Response 200 `SubsidyRead`. Errors: 404; 409 `SUBSIDY_CLOSED` (paid/rejected); 422 unknown doc_type.
+
+### POST /subsidies/{id}/documents/{doc_type}/file
+- Roles: office, director. Multipart field `file`: JPEG/PNG/WEBP/PDF (checked by content), max 5 MB. Also marks the document received.
+- Response 200 `SubsidyRead`. Errors: 404; 409 `SUBSIDY_CLOSED`; 413 `FILE_TOO_LARGE`; 422 `FILE_TYPE_NOT_ALLOWED`.
+
+### POST /subsidies/{id}/advance
+- Roles: office, director. Body `{to_status, date, application_number?, amount?, reason?}` (`date` = IST date, not in the future).
+- `submitted` needs `application_number` and all documents except `installation_certificate`; `under_review` needs the installation job completed and `installation_certificate`; `approved` needs `amount > 0`; `paid` needs `0 < amount <= sanctioned_amount`; `rejected` needs `reason`.
+- Response 200 `SubsidyRead`. Errors: 404; 409 `INVALID_SUBSIDY_STEP`, `DOCUMENTS_MISSING` (`fields` lists each missing doc_type), `INSTALLATION_NOT_COMPLETED`, `APPLICATION_NUMBER_TAKEN`; 422 validation (missing number/reason, bad amount, future date).
+
+### POST /pay-runs
+- Roles: director. Body `{month: "YYYY-MM"}`. Creates or recalculates the month draft.
+- Response 201 `PayRunRead` when created, 200 when recalculated. Errors: 409 `PAY_RUN_LOCKED` (already paid); 422 bad month.
+
+### GET /pay-runs
+- Roles: director. Query `page`, `page_size`. Response 200 `Page[PayRunSummary]`, newest month first.
+
+### GET /pay-runs/{id}
+- Roles: director. Response 200 `PayRunRead`. Errors: 404.
+
+### POST /pay-runs/{id}/mark-paid
+- Roles: director. Body `{paid_on: date, payment_reference: string}`.
+- Response 200 `PayRunRead`. Errors: 404; 409 `PAY_RUN_LOCKED`.
+
+### GET /me/pay?month=YYYY-MM
+- Roles: technician. Response 200 `{pay_run_id, month, status, paid_on, line: PayLine|null}` (own line only). Errors: 404 no run for that month; 422 bad month.
+
+### Changed
+- `POST /orders/{id}/payments`: the first payment now also creates the subsidy application (with its 6 document rows) when the enquiry had `subsidy_requested: true`. No shape change.

@@ -50,6 +50,7 @@ from app.schemas.orders import (
     PickListRef,
 )
 from app.schemas.quotes import QuoteCustomer, QuoteSite
+from app.services import subsidies as subsidy_service
 from app.services.catalog import money, price_line
 from app.services.common import RequestMeta
 
@@ -295,6 +296,7 @@ def record_payment(
     # 6. First payment: confirm + pick list + installation job.
     if is_first:
         _confirm_and_start_work(db, order, actor, meta)
+        subsidy_service.create_on_first_payment(db, order, actor=actor, meta=meta)
 
     db.commit()
     db.refresh(payment)
