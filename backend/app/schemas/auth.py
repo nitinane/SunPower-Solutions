@@ -1,6 +1,7 @@
-"""Login request and the logged-in user returned to the frontend."""
+"""Login request, the logged-in user, and history (audit) entries for the frontend."""
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,3 +31,15 @@ class CurrentUser(BaseModel):
 class LoginResponse(BaseModel):
     user: CurrentUser
     expires_at: datetime
+
+
+class AuditEntryRead(BaseModel):
+    """One line of a record's history (the 'chatter' timeline)."""
+
+    id: int
+    action: str
+    actor_user_id: int | None = None
+    actor_name: str | None = None
+    old_data: dict[str, Any] | None = None
+    new_data: dict[str, Any] | None = None
+    created_at: datetime
