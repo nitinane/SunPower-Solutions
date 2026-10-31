@@ -100,3 +100,8 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - P3-1 demo pay run: the closed paid repair's charge rows are dated the 15th of last month, so last month's draft pay run has a real repair line.
 - P3-1 demo reset: dev compose files by default (`-Prod` / `COMPOSE=...` for the server); `docker compose up --wait` waits for healthchecks. It runs `down -v`, so it wipes the database and named volumes.
 - P3-1 load test: k6 targets the API port directly (BASE_URL), because the dev stack does not run Nginx; the search serial defaults to INV-3K-0001, Ravi Kumar (demo)'s inverter after a fresh demo reset.
+
+- P3-3 demo: document Swagger at `/api/docs` as the working presentation because the checked-in role screens and RoleGuard are placeholders; do not invent frontend buttons or a deployed URL.
+- P3-3 diagrams: derive core relationships from SQLAlchemy metadata foreign keys and unique constraints, omitting auxiliary tables for readability.
+- P3-3 fresh clone: use an independent local Git clone and base Compose project `sunpower_fresh`, then restore the original containers with start because their dev configuration has an external no-port override.
+- P3-3 Swagger: allow jsDelivr assets and the inline initializer only at exact `/api/docs` because the inherited self-only CSP blocked the required API demo; retain security headers and the main application's policy.

@@ -357,3 +357,9 @@ Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PER
 ## P3-1
 
 No endpoint changes. New dev tooling: `python -m scripts.seed_demo` (demo customers at every stage) and `make demo-reset` / `scripts/demo_reset.ps1`. Demo logins: director@, manager@, office@, warehouse@, tech1@, tech2@, tech3@, support@ (all `@sunpower.in`); the password is DEMO_PASSWORD.
+
+## P3-3
+
+- No business endpoint, role, request body, response JSON or business error-code changes.
+- `GET /api/docs` (public, no request body, response 200 Swagger HTML): exact Nginx location now permits Swagger's jsDelivr script/style assets and inline initializer in Content-Security-Policy. Security headers remain present and the main application policy stays unchanged. No new application error codes; existing proxy rate limits apply.
+- Documentation: README with architecture/data/workflow diagrams, `docs/demo-script.md`, `docs/review-prep.md`, and `docs/fresh-clone-check.md`. Demo uses the API because frontend role pages and `/share/<token>` remain unimplemented; anonymous shares work through `GET /api/v1/public/dashboard/{token}`.
