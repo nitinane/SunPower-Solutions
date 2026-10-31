@@ -66,3 +66,7 @@ class Warranty(IdMixin, TimestampMixin, Base):
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Set when the unit was swapped under warranty; points at the new unit's warranty.
+    replaced_by_warranty_id: Mapped[int | None] = mapped_column(
+        ForeignKey("warranties.id", ondelete="RESTRICT")
+    )

@@ -22,7 +22,7 @@ def _now():
     return datetime.now(UTC)
 
 
-def summary(db, period):
+def summary(db, period, sort="recent"):
     end = _now()
     local = end.astimezone(BUSINESS_TZ)
     start = local.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -31,7 +31,9 @@ def summary(db, period):
     elif period == "month":
         start = start.replace(day=1)
     start = start.astimezone(UTC)
-    cards, jobs, unfinished, repairs = repo.summary_blocks(db, start, end, local.date())
+    cards, jobs, unfinished, repairs = repo.summary_blocks(
+        db, start, end, local.date(), start_date=start.astimezone(BUSINESS_TZ).date(), sort=sort
+    )
     return DashboardSummary(
         period=period,
         from_at=start,

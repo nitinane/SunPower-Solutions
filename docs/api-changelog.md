@@ -325,3 +325,31 @@ Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PER
 
 ### Changed
 - `POST /orders/{id}/payments`: the first payment now also creates the subsidy application (with its 6 document rows) when the enquiry had `subsidy_requested: true`. No shape change.
+
+## P2-4
+
+### POST /stock/receipts
+- Roles: warehouse, director. Body `{supplier_name, supplier_invoice_ref, received_on: date, lines: [{product_id, qty > 0, unit_cost > 0, serials?: [string]}]}` (1-100 lines).
+- Serialized products (inverter, battery, charge controller): `serials` required, one per unit (count == qty); normalized (spaces removed, uppercase). Other products: leave `serials` out.
+- Effects: units created `in_stock` / inventory increased, one stock movement per line, `products.cost_price` = line unit_cost, number `RCV-000123`.
+- Response 201 `ReceiptRead {id, receipt_number, supplier_name, supplier_invoice_ref, received_on, created_by, created_at, total, lines: [{id, product_id, sku, name, qty, unit_cost, line_total}]}`.
+- Errors: 409 `SERIAL_EXISTS` (message lists them); 422 `SERIAL_COUNT_MISMATCH`, validation_error (duplicate serials in the request, serials on a non-serial product, inactive/service product, qty/unit_cost <= 0, future date).
+
+### GET /stock/receipts?from=&to=&page=&page_size=
+- Roles: warehouse, director. `from`/`to` = received_on dates (inclusive). Response 200 `Page[ReceiptRead]`, newest first.
+
+### GET /stock/receipts/{id}
+- Roles: warehouse, director. Response 200 `ReceiptRead`. Errors: 404.
+
+### GET /stock?page=&page_size=
+- Roles: warehouse, office, director. Response 200 `Page[{product_id, sku, name, category, requires_serial, on_hand, low_stock}]`, by sku. Serialized: on_hand = units in stock, low below 5; others: low below 50. Service products excluded.
+
+### POST /tickets/{id}/replace-unit
+- Roles: support, or the assigned technician. Body `{new_serial}`. Ticket must be `assigned` and be about a serialized unit.
+- Under warranty: free (charge `customer_price` 0.00); new warranty from today with the SAME end date as the old one. Out of warranty: charge = sale price, ticket totals += price + GST; new full warranty from today.
+- Old unit -> `returned` (hidden from support unit list); new unit appears in support search (search by the new serial finds the customer).
+- Response 200 `TicketRead`. Errors: 403 not your ticket; 404 `SERIAL_NOT_FOUND`; 409 `TICKET_STATUS_INVALID`, `NO_SERIAL_UNIT`, `UNIT_ALREADY_REPLACED`, `SERIAL_NOT_IN_STOCK`, `SERIAL_WRONG_PRODUCT`; 422 bad serial format.
+
+### Changed
+- `TicketRead.charges[]` adds `replacement_unit_id` (null except for unit swaps).
+- `GET /dashboard/summary` adds `?sort=recent|profit_asc` (default recent; profit_asc = loss-making jobs first). `profit_per_job[]` adds `warranty_service_cost` (part cost + technician hours x rate for under-warranty tickets); `profit` now subtracts it. `cards` adds `stock_purchases` (sum qty x unit_cost of receipts in the period). Same fields in `GET /public/dashboard/{token}`.

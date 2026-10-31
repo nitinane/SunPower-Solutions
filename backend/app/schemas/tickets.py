@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.enums import ChargeType, TicketPriority, TicketStatus
-from app.core.validators import OptionalText, PersonName
+from app.core.validators import OptionalText, PersonName, SerialNumber
 from app.schemas.auth import AuditEntryRead
 from app.schemas.quotes import QuoteCustomer, QuoteSite
 
@@ -66,11 +66,17 @@ class TicketConfirm(BaseModel):
     note: OptionalText = Field(default=None, max_length=5000)
 
 
+class TicketReplaceUnit(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    new_serial: SerialNumber
+
+
 class TicketChargeRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     charge_type: ChargeType
     product_id: int | None
+    replacement_unit_id: int | None
     description: str | None
     quantity: Decimal
     customer_price: Decimal

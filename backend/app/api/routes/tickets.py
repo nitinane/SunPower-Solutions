@@ -9,7 +9,14 @@ from app.core.deps import get_db, get_request_meta, require_role
 from app.core.enums import TicketStatus, UserRole
 from app.models.users import User
 from app.schemas.common import Page
-from app.schemas.tickets import TicketAssign, TicketConfirm, TicketCreate, TicketRead, TicketResolve
+from app.schemas.tickets import (
+    TicketAssign,
+    TicketConfirm,
+    TicketCreate,
+    TicketRead,
+    TicketReplaceUnit,
+    TicketResolve,
+)
 from app.services import tickets as service
 from app.services.common import RequestMeta
 
@@ -75,6 +82,13 @@ def resolve(
     ticket_id: TicketId, data: TicketResolve, db: Db, actor: Resolver, meta: Meta
 ) -> TicketRead:
     return service.to_read(db, service.resolve(db, ticket_id, data, actor=actor, meta=meta))
+
+
+@router.post("/{ticket_id}/replace-unit", response_model=TicketRead)
+def replace_unit(
+    ticket_id: TicketId, data: TicketReplaceUnit, db: Db, actor: Resolver, meta: Meta
+) -> TicketRead:
+    return service.to_read(db, service.replace_unit(db, ticket_id, data, actor=actor, meta=meta))
 
 
 @router.post("/{ticket_id}/confirm", response_model=TicketRead)

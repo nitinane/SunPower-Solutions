@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 Period = Literal["today", "week", "month"]
+JobSort = Literal["recent", "profit_asc"]
 
 
 class DashboardCards(BaseModel):
@@ -14,6 +15,7 @@ class DashboardCards(BaseModel):
     orders_confirmed: int
     payments_received: Decimal
     profit: Decimal
+    stock_purchases: Decimal
     unfinished_jobs: int
     open_repairs: int
 
@@ -25,6 +27,7 @@ class JobProfit(BaseModel):
     revenue: Decimal
     material_cost: Decimal
     labour_cost: Decimal
+    warranty_service_cost: Decimal
     profit: Decimal
     margin_percent: Decimal
 

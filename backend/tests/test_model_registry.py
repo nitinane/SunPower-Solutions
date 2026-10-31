@@ -20,6 +20,8 @@ EXPECTED_TABLES = {
     "inventory",
     "stock_movements",
     "serialized_units",
+    "stock_receipts",
+    "stock_receipt_lines",
     "dispatches",
     "dispatch_items",
     "installation_jobs",

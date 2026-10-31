@@ -9,10 +9,13 @@ from app.models.customers import Customer
 from app.models.dashboard import DashboardShareLink
 from app.models.enquiries import Enquiry
 from app.models.installations import InstallationJob, JobTechnician
+from app.models.inventory import StockReceipt, StockReceiptLine
 from app.models.orders import Order, OrderItem
 from app.models.payments import Payment
 from app.models.quotes import Quote
-from app.models.service_tickets import SupportTicket
+from app.models.service_tickets import SupportTicket, TicketCharge
+from app.models.users import User
+from app.models.warranties import Warranty
 
 
 def _money(value):
@@ -50,9 +53,38 @@ def _profits(start, end):
         .group_by(InstallationJob.order_id)
         .subquery()
     )
+    charge_costs = (
+        select(
+            TicketCharge.ticket_id.label("ticket_id"),
+            func.sum(TicketCharge.cost_amount).label("cost"),
+        )
+        .group_by(TicketCharge.ticket_id)
+        .subquery()
+    )
+    # Free repairs/replacements: part cost to us + technician hours at their rate.
+    warranty_service = (
+        select(
+            Warranty.order_id.label("order_id"),
+            _money(
+                func.sum(
+                    func.coalesce(charge_costs.c.cost, 0)
+                    + func.coalesce(SupportTicket.labour_hours, 0)
+                    * func.coalesce(User.hourly_rate, 0)
+                )
+            ).label("warranty_service_cost"),
+        )
+        .select_from(SupportTicket)
+        .join(Warranty, Warranty.id == SupportTicket.warranty_id)
+        .outerjoin(charge_costs, charge_costs.c.ticket_id == SupportTicket.id)
+        .outerjoin(User, User.id == SupportTicket.assigned_to)
+        .where(SupportTicket.under_warranty.is_(True))
+        .group_by(Warranty.order_id)
+        .subquery()
+    )
     material_cost = func.coalesce(materials.c.material_cost, 0)
     labour_cost = func.coalesce(labour.c.labour_cost, 0)
-    profit = _money(Quote.subtotal - material_cost - labour_cost)
+    service_cost = func.coalesce(warranty_service.c.warranty_service_cost, 0)
+    profit = _money(Quote.subtotal - material_cost - labour_cost - service_cost)
     return (
         select(
             Order.id.label("order_id"),
@@ -63,6 +95,7 @@ def _profits(start, end):
             _money(Quote.subtotal).label("revenue"),
             _money(material_cost).label("material_cost"),
             _money(labour_cost).label("labour_cost"),
+            _money(service_cost).label("warranty_service_cost"),
             profit.label("profit"),
             _money(case((Quote.subtotal > 0, profit * 100 / Quote.subtotal), else_=0)).label(
                 "margin_percent"
@@ -74,6 +107,7 @@ def _profits(start, end):
         .outerjoin(SolarPackage, SolarPackage.id == Quote.package_id)
         .outerjoin(materials, materials.c.order_id == Order.id)
         .outerjoin(labour, labour.c.order_id == Order.id)
+        .outerjoin(warranty_service, warranty_service.c.order_id == Order.id)
         .where(
             Order.confirmed_at >= start,
             Order.confirmed_at < end,
@@ -82,7 +116,7 @@ def _profits(start, end):
     ).subquery()
 
 
-def summary_blocks(db: Session, start, end, today):
+def summary_blocks(db: Session, start, end, today, *, start_date, sort="recent"):
     profits = _profits(start, end)
     enquiry_count = (
         select(func.count())
@@ -101,6 +135,12 @@ def summary_blocks(db: Session, start, end, today):
         .scalar_subquery()
     )
     profit_total = select(func.coalesce(func.sum(profits.c.profit), 0)).scalar_subquery()
+    stock_purchases = (
+        select(func.coalesce(func.sum(StockReceiptLine.qty * StockReceiptLine.unit_cost), 0))
+        .join(StockReceipt, StockReceipt.id == StockReceiptLine.receipt_id)
+        .where(StockReceipt.received_on >= start_date, StockReceipt.received_on <= today)
+        .scalar_subquery()
+    )
     unfinished_count = (
         select(func.count()).select_from(Order).where(*_unfinished()).scalar_subquery()
     )
@@ -114,6 +154,7 @@ def summary_blocks(db: Session, start, end, today):
                 order_count.label("orders_confirmed"),
                 _money(payments).label("payments_received"),
                 _money(profit_total).label("profit"),
+                _money(stock_purchases).label("stock_purchases"),
                 unfinished_count.label("unfinished_jobs"),
                 repair_count.label("open_repairs"),
             )
@@ -121,12 +162,13 @@ def summary_blocks(db: Session, start, end, today):
         .mappings()
         .one()
     )
+    order = (
+        (profits.c.profit.asc(), profits.c.order_id.desc())
+        if sort == "profit_asc"
+        else (profits.c.confirmed_at.desc(), profits.c.order_id.desc())
+    )
     jobs = (
-        db.execute(
-            select(profits)
-            .order_by(profits.c.confirmed_at.desc(), profits.c.order_id.desc())
-            .limit(50)
-        )
+        db.execute(select(profits).order_by(*order).limit(50))
         .mappings()
         .all()
     )

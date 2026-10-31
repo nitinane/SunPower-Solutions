@@ -1,9 +1,9 @@
 """Ticket and support lookup queries; no commits or workflow decisions."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, union
 from sqlalchemy.orm import Session
 
-from app.core.enums import TicketStatus
+from app.core.enums import SerialUnitStatus, TicketStatus
 from app.models.auth import AuditLog
 from app.models.catalog import Product
 from app.models.customers import Customer, Site
@@ -90,8 +90,16 @@ def target(db: Session, *, serial_id: int | None, order_item_id: int | None):
     stmt = select(OrderItem, Order, Product).join(Order, Order.id == OrderItem.order_id)
     stmt = stmt.join(Product, Product.id == OrderItem.product_id)
     if serial_id is not None:
-        stmt = stmt.join(DispatchItem, DispatchItem.order_item_id == OrderItem.id).where(
-            DispatchItem.serialized_unit_id == serial_id
+        # Shipped units come via the dispatch; warranty replacements via their warranty.
+        stmt = stmt.where(
+            OrderItem.id.in_(
+                union(
+                    select(DispatchItem.order_item_id).where(
+                        DispatchItem.serialized_unit_id == serial_id
+                    ),
+                    select(Warranty.order_item_id).where(Warranty.serialized_unit_id == serial_id),
+                )
+            )
         )
     else:
         stmt = stmt.where(OrderItem.id == order_item_id)
@@ -107,6 +115,29 @@ def warranty(db: Session, *, serial_id, order_item_id):
             Warranty.order_item_id == order_item_id, Warranty.serialized_unit_id.is_(None)
         )
     return db.scalars(stmt).first()
+
+
+def warranty_for_update(db: Session, serial_id):
+    return db.scalars(
+        select(Warranty)
+        .where(Warranty.serialized_unit_id == serial_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).first()
+
+
+def _customer_serial_units():
+    """(customer_id, unit_id) for shipped units and warranty replacement units."""
+    shipped = (
+        select(Order.customer_id, DispatchItem.serialized_unit_id.label("unit_id"))
+        .join(Dispatch, Dispatch.order_id == Order.id)
+        .join(DispatchItem, DispatchItem.dispatch_id == Dispatch.id)
+        .where(DispatchItem.serialized_unit_id.is_not(None))
+    )
+    replaced = select(Order.customer_id, Warranty.serialized_unit_id.label("unit_id")).join(
+        Warranty, Warranty.order_id == Order.id
+    ).where(Warranty.serialized_unit_id.is_not(None))
+    return union(shipped, replaced).subquery()
 
 
 def products(db: Session, ids):
@@ -125,12 +156,11 @@ def customers_by_phone(db: Session, phone):
 
 
 def customers_by_serial(db: Session, serial):
+    links = _customer_serial_units()
     stmt = (
         select(Customer)
-        .join(Order, Order.customer_id == Customer.id)
-        .join(Dispatch, Dispatch.order_id == Order.id)
-        .join(DispatchItem, DispatchItem.dispatch_id == Dispatch.id)
-        .join(SerializedUnit, SerializedUnit.id == DispatchItem.serialized_unit_id)
+        .join(links, links.c.customer_id == Customer.id)
+        .join(SerializedUnit, SerializedUnit.id == links.c.unit_id)
         .where(SerializedUnit.serial_number == serial)
         .distinct()
         .order_by(Customer.id)
@@ -166,14 +196,18 @@ def customer_orders(db: Session, customer_id):
 
 
 def customer_units(db: Session, customer_id):
+    """Units the customer has now (faulty units returned in a swap are left out)."""
+    links = _customer_serial_units()
     return db.execute(
         select(SerializedUnit, Product, Warranty)
         .join(Product, Product.id == SerializedUnit.product_id)
-        .join(DispatchItem, DispatchItem.serialized_unit_id == SerializedUnit.id)
-        .join(Dispatch, Dispatch.id == DispatchItem.dispatch_id)
-        .join(Order, Order.id == Dispatch.order_id)
         .outerjoin(Warranty, Warranty.serialized_unit_id == SerializedUnit.id)
-        .where(Order.customer_id == customer_id)
+        .where(
+            SerializedUnit.id.in_(
+                select(links.c.unit_id).where(links.c.customer_id == customer_id)
+            ),
+            SerializedUnit.status != SerialUnitStatus.RETURNED,
+        )
         .order_by(SerializedUnit.id)
     ).all()
 

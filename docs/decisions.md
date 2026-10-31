@@ -30,7 +30,7 @@
 - P1-2 warranties: use the product's current `warranty_months` at delivery because the task explicitly specifies product warranty duration; start dates use the delivery timestamp in Asia/Kolkata.
 - P1-2 seed stock: insert missing rows only, preserving existing balances and serial statuses, because rerunning the seed must not replenish sold stock.
 - P1-2 delivery: also moves the order to `delivered` with an audit entry because subsequent installation and invoice workflows depend on delivery state.
-- P1-3 serialized replacement parts remain roadmap; repair parts must be non-serialized stock products because unit swaps need their own warranty and serial workflow.
+- P1-3 repair parts (`/resolve`) stay non-serialized stock products; serialized units are swapped with `POST /tickets/{id}/replace-unit` (P2-4) because a swap needs its own warranty and serial workflow.
 - P1-3 warranty charges store customer_price=0, while retaining quantities, hours and internal part costs, because the existing warranty_covered_no_customer_charge CHECK requires zero customer prices. Billable prices and GST rates are snapshotted in the resolution audit.
 - P1-3 reopened repairs retain previous charges and add each subsequent visit's parts, hours and totals because stock already consumed and work already done must not disappear; total labour hours are limited to the existing NUMERIC(5,2) column.
 - P1-3 dashboard reports from IST period start to now; unfinished installation and open repair queues span all periods because unresolved work must remain visible. Installed/completed/cancelled orders are excluded from unfinished installations.
@@ -77,3 +77,15 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - pay lines also store `install_amount` / `repair_amount`; `rate` = the technician current hourly rate (repairs); install amounts use each job row snapshot rate, rounded per row.
 - POST /pay-runs returns 201 when created, 200 when a draft is recalculated; GET /me/pay -> 404 when no run exists for that month, `line: null` when the technician has nothing in it.
 - 409 codes: INVALID_SUBSIDY_STEP, DOCUMENTS_MISSING, INSTALLATION_NOT_COMPLETED, SUBSIDY_EXISTS, SUBSIDY_CLOSED, APPLICATION_NUMBER_TAKEN, PAY_RUN_LOCKED.
+- P2-4 schema: new `stock_receipts` + `stock_receipt_lines` and `warranties.replaced_by_warranty_id` (migration `58b329724842`); spec `ticket_charges.serialized_unit_id` -> existing `replacement_unit_id`, `unit_cost` -> existing `cost_amount` (total cost to us, qty x unit cost, same as /resolve).
+- P2-4 serial "returned faulty": maps to `SerialUnitStatus.RETURNED`; the new unit gets `dispatched` because delivery leaves units in that status.
+- P2-4 products.cost_price: set to each receipt line's unit_cost (latest purchase cost) because quotes snapshot cost at quote time and later material cost should follow what we pay now.
+- P2-4 stock movement type in -> `reason=purchase`, reference_type `stock_receipt`; serialized products keep no inventory row (on hand = units in_stock), same as dispatch.
+- P2-4 GET /stock: low_stock below 5 (serial) / 50 (other) because products has no reorder_level; service products and inactive products are left out; returns Page[StockRow].
+- P2-4 receipts: received_on may not be in the future; duplicate serials in one request -> 422 validation_error; a serial on a non-serial product -> 422.
+- P2-4 replacement: the new warranty and unit are linked to the original order line (warranties need order_id/order_item_id); support search, ticket creation and the unit list find replacement units through that warranty; returned units are hidden from the customer's unit list.
+- P2-4 replacement under warranty: end_date = old end_date, or today if the warranty ran out after the ticket opened (coverage is frozen at opening, and end >= start is a CHECK).
+- P2-4 replacement out of warranty: old warranty is not marked replaced (it already ended); a product with warranty_months 0 still gets a 0-day warranty row so the unit stays traceable to the customer.
+- P2-4 dashboard warranty_service_cost: under-warranty tickets linked by `warranty_id -> warranties.order_id`; labour = cumulative `labour_hours` x the assigned technician's current `hourly_rate` (no snapshot exists); cancelled tickets still count because the cost was incurred.
+- P2-4 stock_purchases card: receipts whose `received_on` (IST business date) falls from the period start to today.
+- 409 codes: SERIAL_EXISTS, SERIAL_NOT_IN_STOCK, SERIAL_WRONG_PRODUCT, NO_SERIAL_UNIT, UNIT_ALREADY_REPLACED; 422 SERIAL_COUNT_MISMATCH; 404 SERIAL_NOT_FOUND.

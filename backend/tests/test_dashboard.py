@@ -11,13 +11,15 @@ from test_quotes import _user
 
 from app.core.enums import UserRole
 from app.main import create_app
+from app.models.catalog import Product
 from app.models.dashboard import DashboardShareLink
 from app.models.installations import InstallationJob, JobTechnician
 from app.models.orders import Order, OrderItem
 from app.models.quotes import Quote
+from app.models.users import User
 from app.services import dashboard as service
 
-pytest_plugins = ["test_dispatch"]
+pytest_plugins = ["test_tickets"]
 
 
 @pytest.fixture
@@ -116,3 +118,54 @@ def test_dashboard_share_validation(director):
         {"period": "month", "expires_in_hours": 0},
     ):
         assert director.post("/api/v1/dashboard/share", json=body).status_code == 422
+
+
+def _job(director, order_number, **params):
+    body = director.get("/api/v1/dashboard/summary", params={"period": "month", **params}).json()
+    return body, next(r for r in body["profit_per_job"] if r["order_number"] == order_number)
+
+
+def test_free_warranty_replacement_lowers_profit_and_sorts_first(db, api, director, delivered):
+    from test_replacement import _replace, _unit
+    from test_tickets import _assign, _create_ticket, _resolve
+
+    support = api(_user(db, UserRole.SUPPORT))
+    order = db.get(Order, delivered["order_id"])
+    _, before = _job(director, order.order_number)
+    assert before["warranty_service_cost"] == "0.00"
+    tech = _user(db, UserRole.TECHNICIAN)
+    db.get(User, tech.id).hourly_rate = Decimal("100000.00")
+    db.commit()
+    ticket = _create_ticket(support, delivered)
+    _assign(support, ticket["id"], tech)
+    new = _unit(db, "INV-1K")
+    assert _replace(api(tech), ticket["id"], new.serial_number).status_code == 200
+    assert _resolve(api(tech), ticket["id"], hours="999.99").status_code == 200
+    cost = db.get(Product, new.product_id).cost_price + Decimal("99999000.00")
+    body, after = _job(director, order.order_number, sort="profit_asc")
+    assert Decimal(after["warranty_service_cost"]) == cost
+    assert Decimal(after["profit"]) == Decimal(before["profit"]) - cost < 0
+    profits = [Decimal(r["profit"]) for r in body["profit_per_job"]]
+    assert profits == sorted(profits)
+    assert profits[0] == Decimal(after["profit"])
+
+
+def test_stock_purchases_card_is_exact(db, director, warehouse):
+    product = db.scalars(select(Product).where(Product.sku == "CON-MC4")).one()
+    cost = product.cost_price
+    before = Decimal(director.get("/api/v1/dashboard/summary").json()["cards"]["stock_purchases"])
+    response = warehouse.post(
+        "/api/v1/stock/receipts",
+        json={
+            "supplier_name": "Deccan Cables",
+            "supplier_invoice_ref": "DC-77",
+            "received_on": datetime.now(UTC).astimezone(service.BUSINESS_TZ).date().isoformat(),
+            "lines": [{"product_id": product.id, "qty": "3", "unit_cost": "10.50"}],
+        },
+    )
+    assert response.status_code == 201, response.text
+    after = Decimal(director.get("/api/v1/dashboard/summary").json()["cards"]["stock_purchases"])
+    assert after - before == Decimal("31.50")
+    db.refresh(product)
+    product.cost_price = cost
+    db.commit()

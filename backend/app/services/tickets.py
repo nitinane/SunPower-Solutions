@@ -9,13 +9,22 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.enums import ChargeType, ProductCategory, StockMovementReason, TicketStatus, UserRole
+from app.core.dates import add_months
+from app.core.enums import (
+    ChargeType,
+    ProductCategory,
+    SerialUnitStatus,
+    StockMovementReason,
+    TicketStatus,
+    UserRole,
+)
 from app.core.validators import normalize_phone, normalize_serial
 from app.exceptions import BusinessRuleViolation, Forbidden, NotFound, ValidationFailed
 from app.repositories import auth as audit_repo
 from app.repositories import inventory as inventory_repo
 from app.repositories import tickets as repo
 from app.repositories import users as user_repo
+from app.repositories import warranties as warranty_repo
 from app.schemas.auth import AuditEntryRead
 from app.schemas.quotes import QuoteCustomer, QuoteSite
 from app.schemas.tickets import (
@@ -39,6 +48,10 @@ class TicketConflict(BusinessRuleViolation):
     def __init__(self, code, message):
         self.code = code
         super().__init__(message)
+
+
+class SerialNotFound(NotFound):
+    code = "SERIAL_NOT_FOUND"
 
 
 def _now():
@@ -291,6 +304,102 @@ def resolve(db, ticket_id, data, *, actor, meta=None):
             "labour_gst_percent": str(settings.service_labour_gst_percent),
             "work_notes": data.work_notes,
             "labour_hours": str(data.labour_hours),
+        },
+        meta,
+    )
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+def replace_unit(db, ticket_id, data, *, actor, meta=None):
+    """Swap the faulty serialized unit for one from stock (free under warranty)."""
+    ticket = get_ticket(db, ticket_id, actor=actor, lock=True)
+    _require(ticket, TicketStatus.ASSIGNED)
+    if ticket.faulty_serial_unit_id is None:
+        raise TicketConflict("NO_SERIAL_UNIT", "This ticket is not about a serialized unit")
+    new = inventory_repo.serial_by_number(db, data.new_serial)
+    if new is None:
+        raise SerialNotFound("Serial number not found")
+    old = inventory_repo.lock_serials(db, [ticket.faulty_serial_unit_id])[0]
+    if old.status == SerialUnitStatus.RETURNED:
+        raise TicketConflict("UNIT_ALREADY_REPLACED", f"{old.serial_number} was already replaced")
+    if new.status != SerialUnitStatus.IN_STOCK:
+        raise TicketConflict("SERIAL_NOT_IN_STOCK", f"{new.serial_number} is not in stock")
+    product = repo.products(db, [old.product_id])[old.product_id]
+    if new.product_id != old.product_id:
+        raise TicketConflict(
+            "SERIAL_WRONG_PRODUCT", f"{new.serial_number} is not a {product.sku}"
+        )
+    item, order, _ = repo.target(db, serial_id=old.id, order_item_id=None)
+    old_warranty = repo.warranty_for_update(db, old.id)
+    today = _today()
+    if ticket.under_warranty:
+        # The replacement only covers what was left of the original warranty.
+        end_date = max(old_warranty.end_date, today)
+        price = ZERO
+    else:
+        end_date = add_months(today, product.warranty_months)
+        price = money(product.sale_price)
+    new_warranty = warranty_repo.create(
+        db,
+        order_id=order.id,
+        order_item_id=item.id,
+        product_id=product.id,
+        serialized_unit_id=new.id,
+        quantity=Decimal("1"),
+        start_date=today,
+        end_date=end_date,
+    )
+    if ticket.under_warranty:
+        repo.update(db, old_warranty, replaced_by_warranty_id=new_warranty.id)
+    inventory_repo.update(db, old, status=SerialUnitStatus.RETURNED)
+    inventory_repo.update(db, new, status=SerialUnitStatus.DISPATCHED)
+    inventory_repo.add_movement(
+        db,
+        product_id=product.id,
+        order_id=order.id,
+        quantity_delta=Decimal("-1"),
+        reason=StockMovementReason.SERVICE,
+        performed_by=actor.id,
+        reference_type="ticket",
+        reference_id=ticket.id,
+    )
+    gst = money(price * product.gst_rate / Decimal("100"))
+    repo.add_charge(
+        db,
+        ticket_id=ticket.id,
+        charge_type=ChargeType.PART,
+        product_id=product.id,
+        replacement_unit_id=new.id,
+        description=f"Replacement {product.name} ({new.serial_number})"[:240],
+        quantity=Decimal("1"),
+        cost_amount=money(product.cost_price),
+        customer_price=price,
+        covered_by_warranty=ticket.under_warranty,
+        gst_rate=product.gst_rate,
+    )
+    if price > 0:
+        repo.update(
+            db,
+            ticket,
+            parts_subtotal=money(ticket.parts_subtotal + price),
+            gst=money(ticket.gst + gst),
+            total=money(ticket.total + price + gst),
+        )
+    _audit(
+        db,
+        actor,
+        "unit.replaced",
+        ticket,
+        {"serial": old.serial_number, "warranty_id": old_warranty.id if old_warranty else None},
+        {
+            "serial": new.serial_number,
+            "warranty_id": new_warranty.id,
+            "warranty_end": end_date.isoformat(),
+            "under_warranty": ticket.under_warranty,
+            "unit_price": str(price),
+            "gst": str(gst),
         },
         meta,
     )

@@ -18,6 +18,12 @@ _(none)_
 
 ## Done
 
+- P2-4 stock receiving + warranty replacement, migration `58b329724842` (upgrade, downgrade, upgrade + `alembic check` clean):
+  new `stock_receipts (receipt_number UNIQUE, supplier_name, supplier_invoice_ref, received_on DATE + index, created_by FK users SET NULL)`;
+  new `stock_receipt_lines (receipt_id FK CASCADE + index, product_id FK, qty NUMERIC(12,3) CHECK > 0, unit_cost NUMERIC(12,2) CHECK > 0)`;
+  `warranties.replaced_by_warranty_id BIGINT NULL` FK warranties(id). Mapped, no change: "returned faulty" -> `SerialUnitStatus.RETURNED`,
+  `ticket_charges.serialized_unit_id` -> `replacement_unit_id`, `ticket_charges.unit_cost` -> `cost_amount`.
+
 - P2-3 subsidy + pay, migration `feb61f06aa83` (upgrade, downgrade, upgrade + `alembic check` clean):
   `subsidy_applications` + `applied_on`, `inspected_on`, `sanctioned_on`, `disbursed_on` DATE, `disbursed_amount` NUMERIC(12,2),
   `rejection_reason`, `notes` TEXT; `order_id` UNIQUE; `requested_amount` default 0; CHECK `approved_not_above_requested`

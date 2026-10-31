@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_db, get_request_meta, require_role
 from app.core.enums import UserRole
 from app.models.users import User
-from app.schemas.dashboard import DashboardSummary, Period, ShareCreate, ShareRead
+from app.schemas.dashboard import DashboardSummary, JobSort, Period, ShareCreate, ShareRead
 from app.services import dashboard as service
 from app.services.common import RequestMeta
 
@@ -19,8 +19,10 @@ Meta = Annotated[RequestMeta, Depends(get_request_meta)]
 
 
 @router.get("/dashboard/summary", response_model=DashboardSummary)
-def summary(db: Db, actor: Director, period: Period = "month") -> DashboardSummary:
-    return service.summary(db, period)
+def summary(
+    db: Db, actor: Director, period: Period = "month", sort: JobSort = "recent"
+) -> DashboardSummary:
+    return service.summary(db, period, sort)
 
 
 @router.post("/dashboard/share", response_model=ShareRead, status_code=status.HTTP_201_CREATED)

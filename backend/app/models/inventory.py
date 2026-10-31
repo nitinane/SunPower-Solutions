@@ -1,11 +1,12 @@
 """Inventory balances, immutable stock movements, and serialized units."""
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -94,3 +95,34 @@ class SerializedUnit(IdMixin, TimestampMixin, Base):
     serial_number: Mapped[str] = mapped_column(String(120), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="in_stock")
     received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StockReceipt(IdMixin, TimestampMixin, Base):
+    """Goods received from a supplier (RCV-{id:06d})."""
+
+    __tablename__ = "stock_receipts"
+    __table_args__ = (Index("ix_stock_receipts_received_on", "received_on"),)
+
+    receipt_number: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
+    supplier_name: Mapped[str] = mapped_column(String(180), nullable=False)
+    supplier_invoice_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    received_on: Mapped[date] = mapped_column(Date, nullable=False)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+class StockReceiptLine(IdMixin, Base):
+    __tablename__ = "stock_receipt_lines"
+    __table_args__ = (
+        CheckConstraint("qty > 0", name="qty_positive"),
+        CheckConstraint("unit_cost > 0", name="unit_cost_positive"),
+        Index("ix_stock_receipt_lines_receipt_id", "receipt_id"),
+    )
+
+    receipt_id: Mapped[int] = mapped_column(
+        ForeignKey("stock_receipts.id", ondelete="CASCADE"), nullable=False
+    )
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
+    )
+    qty: Mapped[Decimal] = mapped_column(Numeric(12, 3), nullable=False)
+    unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
