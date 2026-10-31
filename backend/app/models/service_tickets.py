@@ -120,6 +120,7 @@ class TicketCharge(IdMixin, TimestampMixin, Base):
             ondelete="RESTRICT",
             name="fk_ticket_charge_replacement_product",
         ),
+        CheckConstraint("gst_rate IS NULL OR gst_rate BETWEEN 0 AND 100", name="gst_rate_range"),
         Index("ix_ticket_charges_ticket_id", "ticket_id"),
     )
 
@@ -138,6 +139,8 @@ class TicketCharge(IdMixin, TimestampMixin, Base):
     covered_by_warranty: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
+    # GST % at billing time (NULL on rows written before invoices existed).
+    gst_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
 
 
 class TicketWorkLog(IdMixin, TimestampMixin, Base):

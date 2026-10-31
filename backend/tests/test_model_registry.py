@@ -16,6 +16,7 @@ EXPECTED_TABLES = {
     "payments",
     "invoices",
     "invoice_items",
+    "invoice_sequences",
     "inventory",
     "stock_movements",
     "serialized_units",

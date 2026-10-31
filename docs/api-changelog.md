@@ -244,3 +244,29 @@ Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PER
 
 ### Changed
 - `GET /dashboard/summary`: `profit_per_job[].labour_cost` now fills from completed jobs (hours x snapshotted rate). No shape change.
+
+## P2-2
+
+### Shared shapes
+- `InvoiceRead` (printable): `id`, `invoice_number` (`INV/2026-27/000001`), `kind` (`order|service`), `status` (`issued`), `financial_year` (`2026-27`), `invoice_date`, `place_of_supply` (state), `seller {name, gstin, address, state}`, `buyer {customer_id, name, phone, email, gstin|null, address {id, address_line1, address_line2, city, state, pincode}}`, `order_id`, `order_number`, `ticket_id`, `ticket_number` (one of the two pairs is null), `lines: [{description, sku|null, qty, unit_price, gst_percent, taxable, gst_amount}]`, `taxable_amount`, `cgst`, `sgst`, `igst` (intra-state: cgst + sgst, igst "0.00"; inter-state: igst only), `gst_total`, `total`, `amount_paid` / `balance_due` (orders only, null for service invoices), `created_at`.
+- `InvoiceSummary` (list row): `id`, `invoice_number`, `kind`, `invoice_date`, `customer_name`, `order_id`, `ticket_id`, `taxable_amount`, `gst_total`, `total`.
+
+### GET /invoices
+- Roles: office, director.
+- Query: `kind` (optional), `from` / `to` (optional dates, inclusive), `search` (invoice number, customer name, or 4+ phone digits), `page`, `page_size` (default 20, max 100).
+- Response 200: `Page[InvoiceSummary]`, newest first.
+
+### GET /invoices/{id}
+- Roles: office, director.
+- Response 200: `InvoiceRead`. Errors: 404.
+
+### POST /orders/{id}/invoice
+- Roles: office, director. No body.
+- Creates the invoice if missing (for orders delivered before invoices existed).
+- Response 201 `InvoiceRead` when created, 200 when it already existed.
+- Errors: 404; 409 `ORDER_NOT_DELIVERED` (order not delivered/installed/completed yet).
+
+### Changed (automatic invoices, no shape change)
+- `POST /dispatches/{id}/deliver` now also creates the order's invoice in the same transaction.
+- `POST /tickets/{id}/confirm` with `confirmed: true` now also creates a service invoice when the repair is not under warranty and its total > 0.
+- No update or delete endpoints exist for invoices.

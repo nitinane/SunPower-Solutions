@@ -14,6 +14,9 @@ class Customer(IdMixin, TimestampMixin, Base):
         CheckConstraint("length(btrim(full_name)) > 0", name="full_name_not_blank"),
         CheckConstraint("email IS NULL OR email = lower(btrim(email))", name="email_normalized"),
         CheckConstraint("phone_e164 ~ '^\\+[1-9][0-9]{7,14}$'", name="phone_e164"),
+        CheckConstraint(
+            "gstin IS NULL OR gstin ~ '^[0-9]{2}[A-Z0-9]{13}$'", name="gstin_format"
+        ),
         Index("ix_customers_phone_e164", "phone_e164"),
         Index(
             "ix_customers_email_lower",
@@ -25,6 +28,7 @@ class Customer(IdMixin, TimestampMixin, Base):
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     phone_e164: Mapped[str] = mapped_column(String(16), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255))
+    gstin: Mapped[str | None] = mapped_column(String(15))
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
 

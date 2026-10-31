@@ -26,6 +26,7 @@ from app.repositories import inventory as inventory_repo
 from app.repositories import orders as order_repo
 from app.schemas.dispatch import DeliveryCreate, DispatchLine, DispatchRead, ScannedSerial
 from app.schemas.quotes import QuoteCustomer, QuoteSite
+from app.services import invoices as invoice_service
 from app.services import warranties as warranty_service
 from app.services.common import RequestMeta
 
@@ -305,6 +306,7 @@ def deliver(db: Session, dispatch_id: int, data: DeliveryCreate, *, actor: User,
     )
     old_order = order.status
     order_repo.update(db, order, {"status": OrderStatus.DELIVERED})
+    invoice_service.create_for_order(db, order, actor=actor, meta=meta)
     _audit(
         db,
         actor,

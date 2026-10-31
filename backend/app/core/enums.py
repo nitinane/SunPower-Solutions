@@ -147,6 +147,11 @@ class PaymentStatus(StrEnum):
     REFUNDED = "refunded"
 
 
+class InvoiceKind(StrEnum):
+    ORDER = "order"              # created on delivery (moment of supply)
+    SERVICE = "service"          # paid repair, created when the ticket closes
+
+
 class InvoiceStatus(StrEnum):
     ISSUED = "issued"
     PARTIALLY_PAID = "partially_paid"
@@ -303,6 +308,7 @@ ALL_ENUMS: dict[str, type[StrEnum]] = {
     "payment_type": PaymentType,
     "payment_method": PaymentMethod,
     "payment_status": PaymentStatus,
+    "invoice_kind": InvoiceKind,
     "invoice_status": InvoiceStatus,
     "serial_unit_status": SerialUnitStatus,
     "dispatch_status": DispatchStatus,

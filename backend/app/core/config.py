@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     max_upload_mb: int = 10
     service_labour_rate_per_hour: Decimal = Decimal("500.00")
     service_labour_gst_percent: Decimal = Decimal("18.00")
+    # Seller block printed on every invoice.
+    company_name: str = "SunPower Solutions"
+    company_gstin: str = "36AAAAA0000A1Z5"  # placeholder, set the real GSTIN in .env
+    company_address: str = "Hyderabad, Telangana"
+    company_state: str = "Telangana"
 
     @property
     def cors_origin_list(self) -> list[str]:

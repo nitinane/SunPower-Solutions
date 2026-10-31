@@ -53,3 +53,15 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - GET /schedule returns Page[ScheduleRow] (default page_size 50, range max 62 days) because list endpoints use Page.
 - signature_png_base64 may carry a `data:image/png;base64,` prefix (stripped) because canvas.toDataURL() produces it.
 - 409 codes: JOB_NOT_SCHEDULABLE, TECHNICIAN_DOUBLE_BOOKED, JOB_STATUS_INVALID, MATERIAL_NOT_DELIVERED, PHOTO_LIMIT_REACHED, PHOTO_REQUIRED; 413 FILE_TOO_LARGE; 422 FILE_TYPE_NOT_ALLOWED, SIGNATURE_INVALID.
+- invoices schema: added the missing columns/table in migration `c974fad1ffda` (we own the schema now); existing columns mapped by meaning (taxable_amount -> `subtotal`, gst -> `tax_total`, invoice_date -> `issued_on`, invoice_lines -> `invoice_items`).
+- invoice_date: the IST date the invoice is created (delivery or ticket close), not a back-dated `delivered_at`, because gapless numbers must run in date order.
+- invoice status: always `issued` on creation because invoices never change; the other InvoiceStatus values stay unused.
+- order invoice totals: computed from the order lines and checked against the quote snapshot; a mismatch raises (500 + rollback) instead of printing a wrong invoice.
+- CGST/SGST: cgst = (gst / 2) rounded half-up, sgst = gst - cgst (101.01 -> 50.51 + 50.50); state match is case-insensitive and trimmed.
+- ticket_charges.gst_rate: new snapshot column filled at resolve; older rows fall back to the product's GST % (parts) or SERVICE_LABOUR_GST_PERCENT (labour).
+- service invoice: created in confirm only when the ticket closes, `under_warranty` is false and `total > 0`.
+- buyer block on the printout reads the customer and site live (no snapshot columns) because no endpoint edits customers or sites yet; place of supply is snapshotted on the invoice.
+- customers.gstin: new nullable column so the buyer GSTIN can print "if any"; no endpoint sets it yet.
+- POST /orders/{id}/invoice: allowed when the order is delivered, installed or completed (all are "after delivery"); returns 201 when created, 200 when it already existed.
+- COMPANY_GSTIN default is a placeholder (`36AAAAA0000A1Z5`) and must be replaced in production `.env`.
+- 409 code: ORDER_NOT_DELIVERED.

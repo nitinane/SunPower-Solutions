@@ -27,6 +27,7 @@ from app.schemas.tickets import (
     TicketCreate,
     TicketRead,
 )
+from app.services import invoices as invoice_service
 from app.services.catalog import money
 from app.services.common import RequestMeta
 
@@ -234,6 +235,7 @@ def resolve(db, ticket_id, data, *, actor, meta=None):
             cost_amount=money(part.qty * product.cost_price),
             customer_price=price,
             covered_by_warranty=ticket.under_warranty,
+            gst_rate=product.gst_rate,
         )
         part_subtotal += amount
         gst += line_gst
@@ -260,6 +262,7 @@ def resolve(db, ticket_id, data, *, actor, meta=None):
             customer_price=rate,
             cost_amount=ZERO,
             covered_by_warranty=ticket.under_warranty,
+            gst_rate=settings.service_labour_gst_percent,
         )
     old = {"status": ticket.status}
     repo.update(
@@ -304,6 +307,8 @@ def confirm(db, ticket_id, data, *, actor, meta=None):
     if data.confirmed:
         changes.update(confirmed_by_name=data.customer_name, customer_confirmed_at=_now())
     repo.update(db, ticket, **changes)
+    if data.confirmed and not ticket.under_warranty and ticket.total > 0:
+        invoice_service.create_for_ticket(db, ticket, actor=actor, meta=meta)
     _audit(
         db,
         actor,

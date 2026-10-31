@@ -18,6 +18,15 @@ _(none)_
 
 ## Done
 
+- P2-2 invoices, migration `c974fad1ffda` (upgrade, downgrade, upgrade + `alembic check` clean):
+  `invoices` + `customer_id` FK NOT NULL, `kind` (order/service), `financial_year` VARCHAR(7), `place_of_supply_state`,
+  `cgst`/`sgst`/`igst` NUMERIC(12,2), `created_by`; `order_id` / `ticket_id` now UNIQUE (replaced the plain indexes);
+  CHECKs: kind allowed, kind matches parent, FY format, cgst+sgst+igst = tax_total, subtotal+tax_total = total.
+  `invoice_items` + `sku`, `taxable`, `gst_amount`. New table `invoice_sequences (financial_year PK, last_number)`.
+  `ticket_charges.gst_rate` NUMERIC(5,2) NULL (GST % snapshot at billing). `customers.gstin` VARCHAR(15) NULL + format CHECK.
+  Spec names mapped: taxable_amount -> `subtotal`, gst -> `tax_total`, invoice_date -> `issued_on`, invoice_lines -> `invoice_items`
+  (description -> `description_snapshot`, qty -> `quantity`, gst_percent -> `gst_rate`).
+
 - `dispatches.delivered_by BIGINT NULL` FK users(id) ON DELETE SET NULL, migration `b7c3e1f04d21`; set by `POST /dispatches/{id}/deliver`. Upgrade, downgrade, upgrade + `alembic check` clean.
 
 - P1-1 orders implementation: first payment creates the dispatch pick list and unscheduled installation job in the payment transaction. Previous non-schema implementation note resolved.
