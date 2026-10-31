@@ -58,3 +58,14 @@ test('BUG-006 installations default schedule range is valid', async ({ page }) =
   expect((await response).status()).toBe(200)
   await expect(page.locator('body')).not.toContainText('Pick at most 62 days')
 })
+
+test('BUG-007 new share URL survives clipboard denial', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', e => errors.push(e.message))
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('Clipboard denied')) } }))
+  await openAs(page, 'director', '/director/sharing')
+  await page.getByRole('button', { name: 'Create & copy link' }).click()
+  await expect(page.getByLabel('New share URL')).toHaveValue(/\/share\//)
+  await expect(page.getByText('Copy unavailable. Select and copy the URL above.')).toBeVisible()
+  expect(errors).toEqual([])
+})

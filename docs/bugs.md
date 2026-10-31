@@ -131,7 +131,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a10-director-dashboard-new-share-link-is-visible-on-screen-not-only-copied-to-clipb.png
 - Likely layer: frontend, `frontend/src/pages/director/DirectorPage.tsx` Shares.
 - PDF requirement: R18
-- Status: open
+- Status: fixed in `fix(BUG-007): retain share URLs when copying fails`
 
 ### BUG-008 [major] Public enquiry page and shared report page show the staff sidebar
 - Role / screen / URL: anonymous / `/public` and `/share/:token`
