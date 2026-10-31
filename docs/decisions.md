@@ -41,3 +41,15 @@ P3-2: Retain the existing Compose service name web; Caddy proxies to web:80 beca
 P3-2: ENVIRONMENT takes precedence over legacy ENV; production disables CORS and development permits only localhost:5173.
 P3-2: Upgrade FastAPI to permit patched Starlette 1.3.1; pin PyJWT 2.14.0 and python-multipart 0.0.30 to fix high/critical advisories, retaining medium/low findings per task scope.
 P3-2: Add frontend Node type definitions and a lockfile because the existing Vite configuration uses process and production requires npm ci.
+- installation job statuses: spec UNSCHEDULED -> `planned` (server default), SCHEDULED / IN_PROGRESS / COMPLETED -> same names, because same meaning.
+- installation_jobs.scheduled_date: stored in `scheduled_at` as 00:00 Asia/Kolkata of that date because the column exists and GET /orders already reads it as an IST date; no second date column.
+- installation_jobs: finished_at -> `completed_at`, system_kw -> `installed_capacity_kw`, signer_name -> `signed_by_name` (+ `signed_at`) because same meaning.
+- job_technicians: user_id -> `technician_id`, hours -> `hours_worked` NUMERIC(7,2), hourly_cost -> `hourly_rate` snapshot because same meaning; a technician with no hourly_rate is booked at 0.00 because the column is NOT NULL.
+- installation_evidence: kind -> `evidence_type`, size_bytes -> `file_size_bytes` because same meaning.
+- storage: added `save_bytes(content, ext)` / `open_bytes(key)` to app/storage/file_storage.py (keys `yyyy/mm/<uuid4>.<ext>`) because the old `save_file` uses the upload's filename and Content-Type header, which the spec forbids; `save_file` left untouched.
+- double booking: technician user rows are locked FOR UPDATE (id order) while checking because two parallel bookings on different jobs would otherwise both pass.
+- complete: order -> `completed` when already fully paid, else `installed`, because enums.py defines completed = installed + fully paid.
+- GET /installation-jobs/{id} crew shows name + hours, not hourly rate, because technicians can open it and rates are cost data.
+- GET /schedule returns Page[ScheduleRow] (default page_size 50, range max 62 days) because list endpoints use Page.
+- signature_png_base64 may carry a `data:image/png;base64,` prefix (stripped) because canvas.toDataURL() produces it.
+- 409 codes: JOB_NOT_SCHEDULABLE, TECHNICIAN_DOUBLE_BOOKED, JOB_STATUS_INVALID, MATERIAL_NOT_DELIVERED, PHOTO_LIMIT_REACHED, PHOTO_REQUIRED; 413 FILE_TOO_LARGE; 422 FILE_TYPE_NOT_ALLOWED, SIGNATURE_INVALID.

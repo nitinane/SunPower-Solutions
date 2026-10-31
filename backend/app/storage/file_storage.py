@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
@@ -35,3 +36,32 @@ def read_file(storage_key: str) -> bytes:
     if path.parent != root:
         raise ValueError("Invalid storage key")
     return path.read_bytes()
+
+
+# ---------------------------------------------------------------- Byte-level helpers
+# Keys look like "2026/11/<uuid4>.png". The uploaded filename is never used on disk.
+
+def save_bytes(content: bytes, ext: str) -> str:
+    """Write bytes under STORAGE_DIR and return the new storage key."""
+    now = datetime.now(UTC)
+    key = f"{now:%Y}/{now:%m}/{uuid4().hex}.{ext}"
+    path = _path_for(key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    return key
+
+
+def open_bytes(storage_key: str) -> bytes:
+    """Read a file saved by save_bytes. Unknown or unsafe key -> FileNotFoundError / ValueError."""
+    return _path_for(storage_key).read_bytes()
+
+
+def _path_for(storage_key: str) -> Path:
+    key = PurePosixPath(storage_key)
+    if key.is_absolute() or len(key.parts) != 3 or any(p in {"", ".", ".."} for p in key.parts):
+        raise ValueError("Invalid storage key")
+    root = _root()
+    path = (root / Path(*key.parts)).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError("Invalid storage key")
+    return path

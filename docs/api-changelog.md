@@ -193,3 +193,54 @@ Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PER
 - GET /health/ready and existing GET /api/health/ready: public, no body, 200 {status: "ready", database: "ok", redis: "ok"}; 503 http_error if DB or Redis fails.
 - All endpoints: unexpected 500 responses contain error {code: "internal_error", message, request_id} and X-Request-ID; exception details stay in server logs.
 - Production: same-origin requests only; Nginx adds security headers, caps request bodies at 6 MB, limits login to 5/minute (burst 5), general API to 10/second (burst 20).
+
+## P2-1
+
+### Shared shapes
+- `CrewMember`: `user_id`, `name`, `hours` (string, null until completed).
+- `ScheduleRow`: `job_id`, `status` (`planned|scheduled|in_progress|completed|cancelled`; `planned` = unscheduled), `scheduled_date` (date), `order_id`, `order_number`, `customer_name`, `customer_phone`, `site {id, address_line1, address_line2, city, state, pincode}`, `crew: CrewMember[]`.
+- `JobRead` (job sheet): `id`, `status`, `order_id`, `order_number`, `customer_name`, `customer_phone`, `site`, `scheduled_date`, `started_at`, `finished_at`, `system_kw`, `power_test_passed`, `signer_name`, `crew: CrewMember[]`, `lines: [{order_item_id, sku, name, qty, requires_serial, serials: string[]}]` (serials from the dispatch), `photo_ids: int[]`, `signature_id` (nullable).
+- `EvidenceRead`: `id`, `job_id`, `kind` (`photo|signature`), `content_type`, `size_bytes`, `created_at`.
+
+### GET /schedule
+- Roles: manager, office, director.
+- Query: `from` (date, required), `to` (date, required, >= from, max 62 days later), `page`, `page_size` (default 50, max 100).
+- Response 200: `Page[ScheduleRow]`, by date. Errors: 422 (bad range).
+
+### POST /installation-jobs/{id}/schedule
+- Roles: manager, director.
+- Body: `{"scheduled_date": "2026-11-14", "technician_ids": [int, ...]}` (1-6, duplicates ignored). Rebooking a scheduled job replaces the crew.
+- Response 200: `JobRead` (status `scheduled`).
+- Errors: 404; 409 `JOB_NOT_SCHEDULABLE` (in progress/completed/cancelled); 409 `TECHNICIAN_DOUBLE_BOOKED` (message e.g. "Ravi already has ORD-000012 on 14 Nov"); 422 date in the past (IST) or a crew member who is not an active technician (`fields.technician_ids`).
+
+### GET /installation-jobs/{id}
+- Roles: technician (only if on the crew, else 403), manager, office, director.
+- Response 200: `JobRead`.
+
+### POST /installation-jobs/{id}/start
+- Roles: technician on the crew (others 403).
+- Response 200: `JobRead` (status `in_progress`, `started_at` set).
+- Errors: 409 `JOB_STATUS_INVALID` (not scheduled), 409 `MATERIAL_NOT_DELIVERED` (dispatch not delivered).
+
+### POST /installation-jobs/{id}/photos
+- Roles: technician on the crew.
+- Body: multipart/form-data, field `file`. JPEG/PNG/WEBP detected from the file bytes (filename and Content-Type are ignored). Max 5 MB, max 10 photos per job.
+- Response 201: `EvidenceRead`.
+- Errors: 409 `JOB_STATUS_INVALID` (not in progress), 409 `PHOTO_LIMIT_REACHED`, 413 `FILE_TOO_LARGE`, 422 `FILE_TYPE_NOT_ALLOWED`.
+
+### POST /installation-jobs/{id}/complete
+- Roles: technician on the crew.
+- Body: `{"system_kw": "4.32" (0.5-50), "power_test_passed": true, "signer_name": string (2-150), "signature_png_base64": string}` (plain base64 or a `data:image/png;base64,...` URL; PNG 1 KB-500 KB).
+- Response 200: `JobRead` (status `completed`, crew `hours` filled: elapsed time rounded up to 0.25 h, min 0.25, same for every crew member). Order becomes `installed` (or `completed` if already fully paid).
+- Errors: 409 `JOB_STATUS_INVALID`, 409 `PHOTO_REQUIRED`, 422 `validation_error` (power test false, kW out of range), 422 `SIGNATURE_INVALID` (not PNG, blank canvas under 1 KB, too big, bad base64).
+
+### GET /me/today
+- Roles: technician.
+- Response 200: `{"date", "surveys": [{id, status, scheduled_at, customer_name, site}], "installation_jobs": ScheduleRow[], "ticket_visits": [{id, ticket_number, status, priority, visit_date, issue_description, customer_name, site}]}` — only the caller's items, today in Asia/Kolkata.
+
+### GET /evidence/{id}/file
+- Roles: any logged-in user. Cookie auth, so it works directly in `<img src>`.
+- Response 200: the file bytes with its stored content type. Errors: 404.
+
+### Changed
+- `GET /dashboard/summary`: `profit_per_job[].labour_cost` now fills from completed jobs (hours x snapshotted rate). No shape change.

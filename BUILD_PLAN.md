@@ -30,7 +30,7 @@ Append to docs/api-changelog.md a section `## <task id>` listing every new or ch
 - [x] P1-2 — Serial scanning, dispatch, warranties on delivery
 - [x] P1-3 — Service tickets, director dashboard, full-chain test  (PHASE 1 CHECKPOINT)
 - [x] P3-2 — Security pass, production deploy files, CI  (done early on purpose: deploy early)
-- [ ] P2-1 — Crew schedule + installation form
+- [x] P2-1 — Crew schedule + installation form
 - [ ] P2-2 — Invoices
 - [ ] P2-3 — Subsidy tracking + technician pay
 - [ ] P3-1 — Test database, rule coverage, demo seed, load test
