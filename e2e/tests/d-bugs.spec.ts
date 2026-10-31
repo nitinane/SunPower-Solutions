@@ -42,3 +42,11 @@ for (const [role, target] of Object.entries({ tech1: '/technician/today', wareho
     await expect(page.locator('body')).not.toContainText('Unexpected Application Error')
   })
 }
+
+test('BUG-005 field pages have navigation and sign out', async ({ page }) => {
+  await openAs(page, 'manager', '/manager/schedule')
+  await expect(page.locator('aside[aria-label="Main navigation"]')).toBeVisible()
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  expect((await page.request.get('/api/v1/auth/me')).status()).toBe(401)
+})

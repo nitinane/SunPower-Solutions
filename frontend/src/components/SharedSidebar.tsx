@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getCurrentUser } from '../api/auth'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getCurrentUser, logout } from '../api/auth'
 
 type NavItem = { icon: string; label: string; path: string; badge?: string }
 function Icon({ children }: { children: string }) { return <span className="material-symbols-outlined" aria-hidden="true">{children}</span> }
@@ -9,6 +9,8 @@ function canSee(role: string | undefined, allowed: string[]) { return !!role && 
 function pathSelected(pathname: string, path: string) { return pathname === path || pathname.startsWith(`${path}/`) }
 
 export function SharedSidebar() {
+  const queryClient = useQueryClient()
+  const signOut = useMutation({ mutationFn: logout, onSuccess: () => { queryClient.clear(); navigate('/login', { replace: true }) } })
   const location = useLocation(); const navigate = useNavigate(); const [collapsed, setCollapsed] = useState(false)
   const session = useQuery({ queryKey: ['auth-me'], queryFn: getCurrentUser, retry: false }); const role = session.data?.role
   const workspaces: NavItem[] = [{ icon: 'dashboard', label: 'Owner Dashboard', path: '/' }, { icon: 'engineering', label: 'Technician Demo', path: '/technician', badge: 'Demo' }, { icon: 'inventory_2', label: 'Warehouse Demo', path: '/warehouse', badge: 'Demo' }]
@@ -45,6 +47,6 @@ export function SharedSidebar() {
         {operations.length > 0 && <><span className="shared-divider"/><span className="shared-section shared-sidebar-text">OPERATIONS</span>{operations.map(renderItem)}</>}
       </nav>
     </div>
-    <div className="shared-sidebar-bottom"><span className="shared-sidebar-text">v4.2</span><button title={collapsed ? 'Expand menu' : 'Collapse menu'} aria-label={collapsed ? 'Expand navigation menu' : 'Collapse navigation menu'} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span className="shared-sidebar-text">{collapsed ? 'Expand Menu' : 'Collapse Menu'}</span><Icon>{collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</Icon></button></div>
+    <div className="shared-sidebar-bottom"><button title="Sign out" aria-label="Sign out" disabled={signOut.isPending} onClick={() => signOut.mutate()}><span className="shared-sidebar-text">Sign out</span><Icon>logout</Icon></button>{signOut.isError && <p role="alert">{signOut.error.message}</p>}<span className="shared-sidebar-text">v4.2</span><button title={collapsed ? 'Expand menu' : 'Collapse menu'} aria-label={collapsed ? 'Expand navigation menu' : 'Collapse navigation menu'} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span className="shared-sidebar-text">{collapsed ? 'Expand Menu' : 'Collapse Menu'}</span><Icon>{collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}</Icon></button></div>
   </aside>
 }

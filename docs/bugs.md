@@ -111,7 +111,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/b-tech1-smoke-tech1-technician-today-page-has-no-sidebar-navigation.png, e2e/artifacts/b-warehouse-smoke-warehouse-warehouse-dispatches-page-has-no-sidebar-navigatio.png, e2e/artifacts/b-manager-smoke-manager-manager-schedule-page-has-no-sidebar-navigation.png
 - Likely layer: frontend, `frontend/src/routes.field.tsx` (field routes are not wrapped in `StaffLayout`/`MobileLayout`).
 - PDF requirement: R10
-- Status: open
+- Status: fixed in `fix(BUG-005): give field screens staff navigation and sign out`
 
 ### BUG-006 [major] Installations page always fails with "Pick at most 62 days"
 - Role / screen / URL: office, manager, director / Installations / `/installations`

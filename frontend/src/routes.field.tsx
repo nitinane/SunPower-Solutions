@@ -1,11 +1,12 @@
 import type { RouteObject } from 'react-router-dom';
+import { StaffLayout } from './layouts/StaffLayout';
 import { Guard } from './pages/field/ui';
 import { Dispatches, DispatchDetail } from './pages/warehouse/Dispatches';
 import { Receiving } from './pages/warehouse/Receiving';
 import { TodayPage, SurveyPage, JobPage } from './pages/technician/FieldPages';
 import { TicketPage } from './pages/field/TicketPage';
 import { SchedulePage } from './pages/manager/ManagerPages';
-export const fieldRoutes: RouteObject[] = [
+export const fieldRoutes: RouteObject[] = [{ element: <StaffLayout />, children: [
     { element: <Guard roles={['warehouse', 'director']}/>, children: [
             { path: '/warehouse/dispatches', element: <Dispatches /> },
             { path: '/warehouse/dispatches/:id', element: <DispatchDetail /> },
@@ -23,4 +24,4 @@ export const fieldRoutes: RouteObject[] = [
     { element: <Guard roles={['support']}/>, children: [
             { path: '/support/tickets/:id', element: <TicketPage /> },
         ] },
-];
+] }];
