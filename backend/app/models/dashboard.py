@@ -1,1 +1,1 @@
-"""Dashboard model stub. TODO: implement with the owning team."""
+"""Dashboard read models are query projections, not persistent tables."""

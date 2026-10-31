@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,7 +7,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     env: str = "development"
     log_level: str = "INFO"
-    database_url: str = "postgresql+psycopg://sunpower:local_dev_password_change_me@db:5432/sunpower"
+    database_url: str = (
+        "postgresql+psycopg://sunpower:local_dev_password_change_me@db:5432/sunpower"
+    )
     redis_url: str = "redis://redis:6379/0"
     jwt_secret: str = "local_only_change_me_to_a_long_random_secret"
     jwt_expire_minutes: int = 60

@@ -1,6 +1,8 @@
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
+
 from fastapi import UploadFile
+
 from app.core.config import settings
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "application/pdf"}

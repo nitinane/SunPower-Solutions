@@ -1,8 +1,11 @@
 """Password and JWT helpers."""
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 import jwt
 from pwdlib import PasswordHash
+
 from app.core.config import settings
 
 _password_hash = PasswordHash.recommended()

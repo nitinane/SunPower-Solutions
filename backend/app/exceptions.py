@@ -33,4 +33,6 @@ class BusinessRuleViolation(AppError):
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     _ = request
-    return JSONResponse(status_code=exc.status_code, content={"error": {"code": exc.code, "message": exc.message}})
+    return JSONResponse(
+        status_code=exc.status_code, content={"error": {"code": exc.code, "message": exc.message}}
+    )

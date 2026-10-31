@@ -1,1 +1,1 @@
-"""Files model stub. TODO: implement with the owning team."""
+"""File metadata is stored in installation_evidence; bytes live under STORAGE_DIR."""
