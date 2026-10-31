@@ -1,0 +1,27 @@
+import type { RouteObject } from 'react-router-dom';
+import { Guard } from './pages/field/ui';
+import { Dispatches, DispatchDetail } from './pages/warehouse/Dispatches';
+import { Receiving } from './pages/warehouse/Receiving';
+import { TodayPage, SurveyPage, JobPage } from './pages/technician/FieldPages';
+import { TicketPage } from './pages/field/TicketPage';
+import { SchedulePage, ManagerSurveys } from './pages/manager/ManagerPages';
+export const fieldRoutes: RouteObject[] = [
+    { element: <Guard roles={['warehouse', 'director']}/>, children: [
+            { path: '/warehouse/dispatches', element: <Dispatches /> },
+            { path: '/warehouse/dispatches/:id', element: <DispatchDetail /> },
+            { path: '/warehouse/receiving', element: <Receiving /> },
+        ] },
+    { element: <Guard roles={['technician']}/>, children: [
+            { path: '/technician/today', element: <TodayPage /> },
+            { path: '/technician/surveys/:id', element: <SurveyPage /> },
+            { path: '/technician/jobs/:id', element: <JobPage /> },
+            { path: '/technician/tickets/:id', element: <TicketPage technician/> },
+        ] },
+    { element: <Guard roles={['manager']}/>, children: [
+            { path: '/manager/surveys', element: <ManagerSurveys /> },
+            { path: '/manager/schedule', element: <SchedulePage /> },
+        ] },
+    { element: <Guard roles={['support']}/>, children: [
+            { path: '/support/tickets/:id', element: <TicketPage /> },
+        ] },
+];
