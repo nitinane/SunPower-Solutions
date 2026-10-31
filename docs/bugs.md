@@ -101,7 +101,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a03-survey-submit-tech1-login-lands-on.png, e2e/artifacts/a06-dispatch-warehouse-login-lands-on.png, e2e/artifacts/a07-crew-calendar-manager-login-lands-on.png
 - Likely layer: frontend, `frontend/src/pages/operations/OperationsPage.tsx` LoginPage `roleHome`.
 - PDF requirement: R7, R10
-- Status: open
+- Status: fixed in `fix(BUG-004): send staff to existing role routes`
 
 ### BUG-005 [major] Field screens have no navigation and no sign-out
 - Role / screen / URL: tech1 `/technician/today`, `/technician/jobs/:id`, `/technician/surveys/:id`, `/technician/tickets/:id`; warehouse `/warehouse/dispatches`, `/warehouse/receiving`; manager `/manager/schedule`; support `/support/tickets/:id`

@@ -35,3 +35,10 @@ test('BUG-003 customer and repairs search show names and phones', async ({ page 
   await page.getByRole('button', { name: 'Search customer' }).click()
   await expect(page.locator('.record-card strong').filter({ hasText: 'Test Customer' })).toContainText('9123456780')
 })
+
+for (const [role, target] of Object.entries({ tech1: '/technician/today', warehouse: '/warehouse/dispatches', manager: '/manager/schedule', office: '/office/enquiries', director: '/director/overview', support: '/support' })) {
+  test(`BUG-004 ${role} login opens its real work screen`, async ({ page }) => {
+    expect(await uiLogin(page, role as Role)).toBe(target)
+    await expect(page.locator('body')).not.toContainText('Unexpected Application Error')
+  })
+}
