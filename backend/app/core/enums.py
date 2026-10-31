@@ -17,8 +17,6 @@ from enum import StrEnum
 class UserRole(StrEnum):
     ADMIN = "admin"              # manages users and settings
     DIRECTOR = "director"        # dashboard, profit, shares numbers
-    MANAGER = "manager"          # approves surveys, plans crew schedule
-    SALES = "sales"              # enquiries, qualification calls, quotes
     SUPPORT = "support"          # service tickets
     WAREHOUSE = "warehouse"      # stock receiving, pick lists, dispatch scanning
     TECHNICIAN = "technician"    # surveys, installations, repairs
@@ -29,8 +27,6 @@ class UserRole(StrEnum):
 # ---------------------------------------------------------------- Enquiries & customers
 
 class EnquirySource(StrEnum):
-    WEB_FORM = "web_form"
-    PHONE_CALL = "phone_call"
     WHATSAPP = "whatsapp"        # logged by staff, no WhatsApp API
     WALK_IN = "walk_in"
     WEBSITE = "website"
@@ -43,7 +39,6 @@ class EnquiryStatus(StrEnum):
     NEW = "new"                  # arrived, nobody has called yet
     CONTACTED = "contacted"      # called, follow-up pending
     QUALIFIED = "qualified"      # call checks passed -> ready for site survey
-    LOST = "lost"                # closed with a reason, never deleted
     CONVERTED = "converted"      # became an order
     UNQUALIFIED = "unqualified"
     CLOSED = "closed"
@@ -52,7 +47,6 @@ class EnquiryStatus(StrEnum):
 class CustomerType(StrEnum):
     HOME = "home"
     FACTORY = "factory"          # PDF: "homes and small factories"
-    RESIDENTIAL = "residential"
 
 
 class SystemType(StrEnum):
@@ -103,9 +97,6 @@ class ProductCategory(StrEnum):
     EARTHING = "earthing"            # safety parts
     STAND = "stand"
     SERVICE = "service"              # labour, never stocked
-    STRUCTURE = "structure"
-    CABLE = "cable"
-    ACCESSORY = "accessory"
     OTHER = "other"
 
 
@@ -121,7 +112,6 @@ class QuoteStatus(StrEnum):
 
 
 class OrderStatus(StrEnum):
-    AWAITING_PAYMENT = "awaiting_payment"  # quote accepted, no money yet
     CONFIRMED = "confirmed"                # advance/full paid -> pick list + crew schedule
     DISPATCHED = "dispatched"
     DELIVERED = "delivered"                # warranty clocks start here
@@ -151,22 +141,15 @@ class PaymentMethod(StrEnum):
 
 class PaymentStatus(StrEnum):
     PENDING = "pending"
-    CONFIRMED = "confirmed"
     FAILED = "failed"
     COMPLETED = "completed"
     REFUNDED = "refunded"
-
-
-class InvoiceKind(StrEnum):
-    ORDER = "order"
-    SERVICE = "service"
 
 
 class InvoiceStatus(StrEnum):
     ISSUED = "issued"
     PARTIALLY_PAID = "partially_paid"
     PAID = "paid"
-    CANCELLED = "cancelled"
     DRAFT = "draft"
     VOID = "void"
 
@@ -177,15 +160,12 @@ class SerialUnitStatus(StrEnum):
     IN_STOCK = "in_stock"
     DISPATCHED = "dispatched"
     INSTALLED = "installed"
-    FAULTY = "faulty"
     RETURNED = "returned"
-    SCRAPPED = "scrapped"
     RESERVED = "reserved"
     DAMAGED = "damaged"
 
 
 class DispatchStatus(StrEnum):
-    PICK_PENDING = "pick_pending"    # this IS the pick list the warehouse sees
     PACKED = "packed"
     DISPATCHED = "dispatched"
     DELIVERED = "delivered"
@@ -194,7 +174,6 @@ class DispatchStatus(StrEnum):
 
 
 class StockMovementReason(StrEnum):
-    PURCHASE_RECEIPT = "purchase_receipt"
     RESERVATION = "reservation"
     RELEASE = "release"
     DISPATCH = "dispatch"
@@ -215,10 +194,7 @@ class InstallationJobStatus(StrEnum):
 
 
 class EvidenceType(StrEnum):
-    ROOF_PHOTO = "roof_photo"
-    EQUIPMENT_PHOTO = "equipment_photo"
     SIGNATURE = "signature"
-    OTHER = "other"
     PHOTO = "photo"
     DOCUMENT = "document"
 
@@ -239,12 +215,6 @@ class WarrantyState(StrEnum):
     VOID = "void"
 
 
-class TicketSource(StrEnum):
-    PHONE_CALL = "phone_call"
-    WALK_IN = "walk_in"
-    WEB_FORM = "web_form"
-
-
 class TicketPriority(StrEnum):
     LOW = "low"
     NORMAL = "normal"
@@ -256,7 +226,6 @@ class TicketStatus(StrEnum):
     OPEN = "open"
     ASSIGNED = "assigned"
     IN_PROGRESS = "in_progress"
-    AWAITING_CONFIRMATION = "awaiting_confirmation"  # fixed, waiting for customer
     CLOSED = "closed"                                # customer confirmed it works
     CANCELLED = "cancelled"
     WAITING_CUSTOMER = "waiting_customer"
@@ -277,12 +246,8 @@ class NonProductChargeType(StrEnum):
 # ---------------------------------------------------------------- Subsidy & technician pay
 
 class SubsidyStatus(StrEnum):
-    NOT_STARTED = "not_started"
     DOCUMENTS_COLLECTED = "documents_collected"
-    APPLIED = "applied"
-    INSPECTION_DONE = "inspection_done"
     APPROVED = "approved"
-    DISBURSED = "disbursed"
     REJECTED = "rejected"
     DRAFT = "draft"
     SUBMITTED = "submitted"
@@ -336,7 +301,6 @@ ALL_ENUMS: dict[str, type[StrEnum]] = {
     "payment_type": PaymentType,
     "payment_method": PaymentMethod,
     "payment_status": PaymentStatus,
-    "invoice_kind": InvoiceKind,
     "invoice_status": InvoiceStatus,
     "serial_unit_status": SerialUnitStatus,
     "dispatch_status": DispatchStatus,
@@ -344,7 +308,6 @@ ALL_ENUMS: dict[str, type[StrEnum]] = {
     "installation_job_status": InstallationJobStatus,
     "evidence_type": EvidenceType,
     "warranty_state": WarrantyState,
-    "ticket_source": TicketSource,
     "ticket_priority": TicketPriority,
     "ticket_status": TicketStatus,
     "charge_type": ChargeType,

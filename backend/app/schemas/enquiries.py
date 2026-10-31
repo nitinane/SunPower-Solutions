@@ -7,7 +7,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.enums import CustomerType, EnquirySource, EnquiryStatus, SystemType
-from app.core.validators import normalize_email, normalize_phone, validate_pincode
+from app.core.validators import (
+    Pincode,
+    PersonName,
+    normalize_email,
+    normalize_phone,
+)
 
 
 class _EnquirySubmission(BaseModel):
@@ -15,13 +20,13 @@ class _EnquirySubmission(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    contact_name: str = Field(min_length=1, max_length=150)
+    contact_name: PersonName
     phone: str = Field(min_length=1, max_length=40)
     email: str | None = Field(default=None, max_length=255)
     address_line: str = Field(min_length=1, max_length=240)
     city: str = Field(min_length=1, max_length=100)
     state: str = Field(min_length=1, max_length=100)
-    pincode: str = Field(min_length=6, max_length=6)
+    pincode: Pincode
     customer_type: CustomerType
     system_type: SystemType
     requested_capacity_kw: Decimal = Field(
@@ -34,7 +39,7 @@ class _EnquirySubmission(BaseModel):
     notes: str | None = Field(default=None, max_length=5000)
 
     @field_validator(
-        "contact_name", "address_line", "city", "state"
+        "address_line", "city", "state"
     )
     @classmethod
     def strip_required_text(cls, value: str) -> str:
@@ -58,14 +63,6 @@ class _EnquirySubmission(BaseModel):
             return None
         return normalize_email(value)
 
-    @field_validator("pincode")
-    @classmethod
-    def validate_indian_pincode(cls, value: str) -> str:
-        normalized = value.strip()
-        validate_pincode(normalized)
-        return normalized
-
-
 class EnquiryPublicCreate(_EnquirySubmission):
     """Website enquiry input; ``website_url`` is a honeypot and must stay empty."""
 
@@ -80,7 +77,7 @@ class EnquiryStaffCreate(_EnquirySubmission):
     @field_validator("source")
     @classmethod
     def reject_website_source(cls, value: EnquirySource) -> EnquirySource:
-        if value in {EnquirySource.WEB_FORM, EnquirySource.WEBSITE}:
+        if value == EnquirySource.WEBSITE:
             raise ValueError("Staff-created enquiries cannot use the website source")
         return value
 
@@ -137,7 +134,7 @@ class EnquiryRead(BaseModel):
     id: int
     customer_id: int | None = None
     site_id: int | None = None
-    contact_name: str
+    contact_name: PersonName
     phone_raw: str
     phone_e164: str | None = None
     email: str | None = None
@@ -147,7 +144,7 @@ class EnquiryRead(BaseModel):
     address_line: str
     city: str
     state: str
-    pincode: str
+    pincode: Pincode
     requested_capacity_kw: Decimal | None = None
     system_type: SystemType
     customer_type: CustomerType

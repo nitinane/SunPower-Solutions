@@ -24,7 +24,7 @@ def public_payload() -> dict[str, object]:
         "city": " Hyderabad ",
         "state": " Telangana ",
         "pincode": "500032",
-        "customer_type": "residential",
+        "customer_type": "home",
         "system_type": "on_grid",
         "requested_capacity_kw": "3.0",
         "subsidy_requested": True,
@@ -58,6 +58,13 @@ def test_public_create_rejects_invalid_phone_and_pincode() -> None:
     payload["pincode"] = "12345"
     with pytest.raises(ValidationError):
         EnquiryPublicCreate.model_validate(payload)
+
+
+def test_public_create_normalizes_pincode_before_length_validation() -> None:
+    payload = public_payload()
+    payload["pincode"] = " 500081"
+    schema = EnquiryPublicCreate.model_validate(payload)
+    assert schema.pincode == "500081"
 
 
 def test_staff_create_rejects_website_source() -> None:
@@ -100,7 +107,7 @@ def test_enquiry_read_uses_service_overdue_value_and_excludes_private_key() -> N
         "pincode": "500032",
         "requested_capacity_kw": Decimal("3.0"),
         "system_type": "on_grid",
-        "customer_type": "residential",
+        "customer_type": "home",
         "subsidy_requested": False,
         "shadow_free_roof_area_sqft": None,
         "monthly_bill_amount": None,
