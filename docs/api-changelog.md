@@ -370,3 +370,12 @@ No endpoint changes. New dev tooling: `python -m scripts.seed_demo` (demo custom
 - `GET /api/v1/dashboard/summary`: roles **director, admin**. No request body; query remains `period=today|week|month` and `sort=recent|profit_asc`. Existing response `{period, from_at, to_at, cards, profit_per_job, unfinished_jobs, open_repairs}` adds two Decimal-string card fields: `advance_payments` (completed advance-type payments by paid_at) and `technician_hours` (installation crew person-hours by job completion, plus per-visit repair labour hours by charge creation). Both use the selected IST period start and exclusive current-time end. Errors unchanged: 401 `unauthorized`, 403 `forbidden`, 422 `validation_error`.
 - `GET /api/v1/public/dashboard/{token}`: **public with a valid share token**, no body. Same DashboardSummary response including the two new cards. Existing invalid/expired/revoked token response is 404 `not_found`; request validation is 422 `validation_error`. No new error codes.
 - Full role/screen/request/response/error checklist: [frontend-checklist.md](frontend-checklist.md). Captured contract: [openapi-audit.json](openapi-audit.json), obtained from **GET /api/openapi.json**. Problem coverage and honest remaining gaps: [ps-coverage.md](ps-coverage.md).
+
+## GAPS-1
+
+- Added GET `/api/v1/products` for Support, Technician, Office, Warehouse and Director (Admin override): paginated SKU/name search, optional requires_serial filter, sale/GST prices and stock, with no cost fields.
+- Office can read ticket lists and details; no new write permissions.
+- Added Office/Director GET `/api/v1/subsidies/{subsidy_id}/documents/{doc_type}/file`: stored content type and bytes, 404 not_found for absent metadata/files.
+- Added Director GET `/api/v1/dashboard/share`: paginated active links with id, period, expires_at, created_at only; no token, hash or URL.
+- Default JWT session and both environment examples now use 480 minutes (eight hours).
+- Regression tests cover permitted fields, role access, search, stock, pagination, downloads, active-link filtering and session defaults. Refreshed the live OpenAPI snapshot and affected screen guidance. No schema migration.

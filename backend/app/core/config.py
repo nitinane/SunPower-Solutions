@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
     redis_url: str = "redis://redis:6379/0"
     jwt_secret: str = "local_only_change_me_to_a_long_random_secret"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 480
     cors_origins: str = "http://localhost:5173"
     storage_dir: str = "/app/storage"
     max_upload_mb: int = 10

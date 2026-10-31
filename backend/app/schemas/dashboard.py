@@ -69,3 +69,10 @@ class ShareRead(BaseModel):
     id: int
     url: str
     expires_at: datetime
+
+
+class ShareListItem(BaseModel):
+    id: int
+    period: Period
+    expires_at: datetime
+    created_at: datetime

@@ -266,3 +266,12 @@ def active_share(db: Session, token_hash, now):
 def revoke(db: Session, row, now):
     row.revoked_at = now
     db.flush()
+
+
+def list_active_shares(db: Session, now, *, limit, offset):
+    stmt = select(DashboardShareLink).where(
+        DashboardShareLink.revoked_at.is_(None), DashboardShareLink.expires_at > now,
+    )
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    return list(db.scalars(stmt.order_by(DashboardShareLink.id.desc())
+                           .limit(limit).offset(offset))), total

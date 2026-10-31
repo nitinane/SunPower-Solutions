@@ -108,3 +108,5 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - AUDIT dashboard: advance_payments counts completed advance-type payments by paid_at; technician_hours counts crew person-hours by installation completed_at plus repair labour-charge quantities by created_at, because cash receipts and performed work belong to their own IST reporting periods rather than the order-confirmation date.
 - AUDIT users: allow manager on the existing active-employee dropdown because managers schedule crews and assign repair visits; keep the same UserBrief fields without rates or purchase costs.
 - AUDIT evidence: DONE means the core backend rule has a passing test, while mobile/customer installation acceptance, printable/sendable invoices and verified live deployment remain PARTIAL because backend JSON/tests alone do not prove those user-facing outcomes.
+
+Session length: default JWT expiry is 480 minutes to cover an eight-hour shift.

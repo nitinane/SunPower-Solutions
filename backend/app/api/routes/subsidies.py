@@ -3,9 +3,11 @@ Government subsidy paperwork per order: document checklist, files and status ste
 All rules live in app/services/subsidies.py.
 """
 
+from io import BytesIO
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Path, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, get_request_meta, require_role
@@ -107,3 +109,13 @@ def advance(
 ) -> SubsidyRead:
     app = subsidy_service.advance(db, subsidy_id, data, actor=actor, meta=meta)
     return subsidy_service.to_read(db, app)
+
+
+@router.get("/subsidies/{subsidy_id}/documents/{doc_type}/file",
+            response_class=StreamingResponse,
+            responses={200: {"content": {"application/octet-stream": {}}}})
+def download_document(
+    subsidy_id: SubsidyId, doc_type: SubsidyDocType, db: DbSession, actor: Office,
+) -> StreamingResponse:
+    content, content_type = subsidy_service.download_document(db, subsidy_id, doc_type)
+    return StreamingResponse(BytesIO(content), media_type=content_type)

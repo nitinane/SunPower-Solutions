@@ -103,3 +103,13 @@ def _audit(db, actor, action, row, new, meta):
         request_id=meta.request_id,
         ip_address=meta.ip_address,
     )
+
+
+def list_shares(db, *, page, page_size):
+    from app.schemas.dashboard import ShareListItem
+
+    rows, total = repo.list_active_shares(
+        db, _now(), limit=page_size, offset=(page - 1) * page_size,
+    )
+    return [ShareListItem(id=r.id, period=r.period, expires_at=r.expires_at,
+                          created_at=r.created_at) for r in rows], total

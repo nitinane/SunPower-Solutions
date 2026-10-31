@@ -78,3 +78,26 @@ def list_components(
         .order_by(PackageComponent.package_id, PackageComponent.id)
     )
     return [(row[0], row[1]) for row in db.execute(stmt).all()]
+
+
+def list_products(db: Session, *, search, requires_serial, limit, offset):
+    from sqlalchemy import case, or_
+
+    from app.models.inventory import Inventory, SerializedUnit
+
+    serial_stock = (
+        select(func.count(SerializedUnit.id))
+        .where(SerializedUnit.product_id == Product.id, SerializedUnit.status == "in_stock")
+        .correlate(Product).scalar_subquery()
+    )
+    stock = case((Product.tracks_serial, serial_stock),
+                 else_=func.coalesce(Inventory.quantity_on_hand, 0)).label("in_stock")
+    stmt = select(Product, stock).outerjoin(Inventory, Inventory.product_id == Product.id)
+    if search:
+        pattern = "%" + search.replace("/", "//").replace("%", "/%").replace("_", "/_") + "%"
+        stmt = stmt.where(or_(Product.sku.ilike(pattern, escape="/"),
+                              Product.name.ilike(pattern, escape="/")))
+    if requires_serial is not None:
+        stmt = stmt.where(Product.tracks_serial == requires_serial)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    return db.execute(stmt.order_by(Product.id).limit(limit).offset(offset)).all(), total

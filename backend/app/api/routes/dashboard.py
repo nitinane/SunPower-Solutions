@@ -2,13 +2,21 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Response, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, get_request_meta, require_role
 from app.core.enums import UserRole
 from app.models.users import User
-from app.schemas.dashboard import DashboardSummary, JobSort, Period, ShareCreate, ShareRead
+from app.schemas.common import Page
+from app.schemas.dashboard import (
+    DashboardSummary,
+    JobSort,
+    Period,
+    ShareCreate,
+    ShareListItem,
+    ShareRead,
+)
 from app.services import dashboard as service
 from app.services.common import RequestMeta
 
@@ -39,3 +47,13 @@ def revoke(share_id: Annotated[int, Path(gt=0)], db: Db, actor: Director, meta: 
 @router.get("/public/dashboard/{token}", response_model=DashboardSummary)
 def public_summary(token: str, db: Db) -> DashboardSummary:
     return service.public_summary(db, token)
+
+
+@router.get("/dashboard/share", response_model=Page[ShareListItem])
+def list_shares(
+    db: Db, actor: Director,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> Page[ShareListItem]:
+    items, total = service.list_shares(db, page=page, page_size=page_size)
+    return Page(items=items, total=total, page=page, page_size=page_size)

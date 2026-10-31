@@ -403,3 +403,14 @@ def _audit(
         request_id=meta.request_id,
         ip_address=meta.ip_address,
     )
+
+
+def download_document(db: Session, application_id: int, doc_type: SubsidyDocType):
+    doc = repo.get_document(db, application_id, doc_type)
+    if doc is None or doc.storage_key is None:
+        raise NotFound("Document file not found")
+    try:
+        content = file_storage.open_bytes(doc.storage_key)
+    except (FileNotFoundError, ValueError):
+        raise NotFound("Document file not found") from None
+    return content, doc.content_type

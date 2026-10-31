@@ -30,6 +30,7 @@ Viewer = Annotated[
         require_role(
             UserRole.SUPPORT,
             UserRole.MANAGER,
+            UserRole.OFFICE,
             UserRole.DIRECTOR,
             UserRole.TECHNICIAN,
         )

@@ -31,3 +31,14 @@ class PackageRead(BaseModel):
     subtotal: Decimal
     gst: Decimal
     total: Decimal
+
+
+class ProductRead(BaseModel):
+    id: int
+    sku: str
+    name: str
+    category: ProductCategory
+    sale_price: Decimal
+    gst_percent: Decimal
+    requires_serial: bool
+    in_stock: Decimal

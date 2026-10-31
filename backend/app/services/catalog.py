@@ -89,3 +89,17 @@ def list_packages(
             )
         )
     return result
+
+
+def list_products(db, *, search, requires_serial, page, page_size):
+    from app.schemas.catalog import ProductRead
+
+    rows, total = catalog_repo.list_products(
+        db, search=search, requires_serial=requires_serial,
+        limit=page_size, offset=(page - 1) * page_size,
+    )
+    return [ProductRead(
+        id=p.id, sku=p.sku, name=p.name, category=p.category,
+        sale_price=p.sale_price, gst_percent=p.gst_rate,
+        requires_serial=p.tracks_serial, in_stock=stock,
+    ) for p, stock in rows], total

@@ -344,7 +344,7 @@ Call order and contracts:
 
 Priority **P2** · R11, R12, R13.
 
-Display / special needs: Find customer/serial/order-item ownership through support search, retain the ticket id returned by creation, and show coverage_label. Support handles assignment and work. Office may record the customer confirmation when Support provides a resolved ticket id; Office cannot GET /tickets or its detail under current permissions. A persistent Office confirmation queue needs a separately agreed access change.
+Display / special needs: Find customer/serial/order-item ownership through support search, retain the ticket id returned by creation, and show coverage_label. Support handles assignment and work. Office loads GET /tickets?status=resolved and GET /tickets/{ticket_id} for its confirmation queue. Assignment, resolution and replacement remain Support/Technician actions.
 
 Button gates: Create requires exactly one serialized unit or order item. Confirm only a resolved ticket with explicit customer_name and confirmed flag; never infer confirmation from technician completion.
 
@@ -377,7 +377,7 @@ Call order and contracts:
 
 Priority **P2** · R16.
 
-Display / special needs: Display document receipt ticks and days_in_status. Upload multipart file, max 5 MB, JPEG/PNG/WEBP/PDF. API currently has no document download. Use DB status values draft → submitted → under_review → approved → paid.
+Display / special needs: Display document receipt ticks and days_in_status. Upload multipart file, max 5 MB, JPEG/PNG/WEBP/PDF. Download through GET /api/v1/subsidies/{subsidy_id}/documents/{doc_type}/file (Office/Director): authenticated binary response with stored content type; missing file returns 404 not_found. Use DB status values draft → submitted → under_review → approved → paid.
 
 Button gates: Advance one step only; required docs first, installation complete before inspection, disbursed <= sanctioned. Reject needs reason. Disable document edits on paid/rejected.
 
@@ -501,14 +501,14 @@ States: loading, empty, error and success as defined in Global; apply these to e
 
 Call order and contracts:
 
-- **GET `/api/v1/tickets`** — roles: admin, director, manager, support, technician.
+- **GET `/api/v1/tickets`** — roles: admin, director, manager, office, support, technician.
   - query `status`: [TicketStatus](#schema-ticketstatus) or null; optional; —.
   - query `assigned_to_me`: boolean; optional; default=false.
   - query `page`: integer; optional; minimum=1; default=1.
   - query `page_size`: integer; optional; minimum=1; maximum=100; default=20.
   - Body: none.
   - 200 application/json: [Page_TicketRead_](#schema-page_ticketread_). Display fields: `items`, `total`, `page`, `page_size`.
-- **GET `/api/v1/tickets/{ticket_id}`** — roles: admin, director, manager, support, technician.
+- **GET `/api/v1/tickets/{ticket_id}`** — roles: admin, director, manager, office, support, technician.
   - path `ticket_id`: integer; required; exclusiveMinimum=0.
   - Body: none.
   - 200 application/json: [TicketRead](#schema-ticketread). Display fields: `id`, `ticket_number`, `customer_id`, `site_id`, `faulty_serial_unit_id`, `order_item_id`, `warranty_id`, `status`, `priority`, `fault_code`, `issue_description`, `under_warranty`, `coverage_label`, `assigned_to`, `visit_date`, `work_notes`, `labour_hours`, `parts_subtotal`, `labour_amount`, `gst`, `total`, `opened_at`, `resolved_at`, `confirmed_by_name`, `customer_confirmed_at`, `charges`, `history`.
@@ -619,7 +619,7 @@ Call order and contracts:
 
 Priority **P2** · R12, R13.
 
-Display / special needs: Own tickets only. Camera scan (html5-qrcode) with typed fallback for replacement new_serial. Show free/billable coverage and charges; mobile layout at 360px. Parts require product_id; no technician catalog/stock picker endpoint exists yet (see roadmap).
+Display / special needs: Own tickets only. Camera scan (html5-qrcode) with typed fallback for replacement new_serial. Show free/billable coverage and charges; mobile layout at 360px. Select parts from GET /api/v1/products?search=&requires_serial=false&page=; use product id and in_stock, with sale_price/gst_percent for estimates.
 
 Button gates: Replace/resolve only assigned own tickets. Replacement same product and in stock. Resolve needs work notes/hours; bulk parts only. Never show a close control to technicians.
 
@@ -627,14 +627,14 @@ States: loading, empty, error and success as defined in Global; apply these to e
 
 Call order and contracts:
 
-- **GET `/api/v1/tickets`** — roles: admin, director, manager, support, technician.
+- **GET `/api/v1/tickets`** — roles: admin, director, manager, office, support, technician.
   - query `status`: [TicketStatus](#schema-ticketstatus) or null; optional; —.
   - query `assigned_to_me`: boolean; optional; default=false.
   - query `page`: integer; optional; minimum=1; default=1.
   - query `page_size`: integer; optional; minimum=1; maximum=100; default=20.
   - Body: none.
   - 200 application/json: [Page_TicketRead_](#schema-page_ticketread_). Display fields: `items`, `total`, `page`, `page_size`.
-- **GET `/api/v1/tickets/{ticket_id}`** — roles: admin, director, manager, support, technician.
+- **GET `/api/v1/tickets/{ticket_id}`** — roles: admin, director, manager, office, support, technician.
   - path `ticket_id`: integer; required; exclusiveMinimum=0.
   - Body: none.
   - 200 application/json: [TicketRead](#schema-ticketread). Display fields: `id`, `ticket_number`, `customer_id`, `site_id`, `faulty_serial_unit_id`, `order_item_id`, `warranty_id`, `status`, `priority`, `fault_code`, `issue_description`, `under_warranty`, `coverage_label`, `assigned_to`, `visit_date`, `work_notes`, `labour_hours`, `parts_subtotal`, `labour_amount`, `gst`, `total`, `opened_at`, `resolved_at`, `confirmed_by_name`, `customer_confirmed_at`, `charges`, `history`.
@@ -814,7 +814,7 @@ Call order and contracts:
 
 Priority **P1** · R12, R13.
 
-Display / special needs: Show coverage_label, charges, total and audit history. Pick exactly one serialized_unit_id or order_item_id. Customer confirmation is recorded by Support or Office after contacting the customer; no public confirmation API. A negative confirmation reopens the ticket. Parts picker for Support remains roadmap.
+Display / special needs: Show coverage_label, charges, total and audit history. Pick exactly one serialized_unit_id or order_item_id. Customer confirmation is recorded by Support or Office after contacting the customer; no public confirmation API. A negative confirmation reopens the ticket. Use GET /api/v1/products?search=&requires_serial=false&page= for the parts picker; costs are never returned.
 
 Button gates: Assign open; resolve/replace assigned; confirm resolved only, with customer_name and confirmed flag. Do not offer a generic close button. Disable repeat actions while pending.
 
@@ -829,14 +829,14 @@ Call order and contracts:
 - **POST `/api/v1/tickets`** — roles: admin, office, support.
   - Body (application/json, required): [TicketCreate](#schema-ticketcreate). Exact fields and constraints in the linked schema below.
   - 201 application/json: [TicketRead](#schema-ticketread). Display fields: `id`, `ticket_number`, `customer_id`, `site_id`, `faulty_serial_unit_id`, `order_item_id`, `warranty_id`, `status`, `priority`, `fault_code`, `issue_description`, `under_warranty`, `coverage_label`, `assigned_to`, `visit_date`, `work_notes`, `labour_hours`, `parts_subtotal`, `labour_amount`, `gst`, `total`, `opened_at`, `resolved_at`, `confirmed_by_name`, `customer_confirmed_at`, `charges`, `history`.
-- **GET `/api/v1/tickets`** — roles: admin, director, manager, support, technician.
+- **GET `/api/v1/tickets`** — roles: admin, director, manager, office, support, technician.
   - query `status`: [TicketStatus](#schema-ticketstatus) or null; optional; —.
   - query `assigned_to_me`: boolean; optional; default=false.
   - query `page`: integer; optional; minimum=1; default=1.
   - query `page_size`: integer; optional; minimum=1; maximum=100; default=20.
   - Body: none.
   - 200 application/json: [Page_TicketRead_](#schema-page_ticketread_). Display fields: `items`, `total`, `page`, `page_size`.
-- **GET `/api/v1/tickets/{ticket_id}`** — roles: admin, director, manager, support, technician.
+- **GET `/api/v1/tickets/{ticket_id}`** — roles: admin, director, manager, office, support, technician.
   - path `ticket_id`: integer; required; exclusiveMinimum=0.
   - Body: none.
   - 200 application/json: [TicketRead](#schema-ticketread). Display fields: `id`, `ticket_number`, `customer_id`, `site_id`, `faulty_serial_unit_id`, `order_item_id`, `warranty_id`, `status`, `priority`, `fault_code`, `issue_description`, `under_warranty`, `coverage_label`, `assigned_to`, `visit_date`, `work_notes`, `labour_hours`, `parts_subtotal`, `labour_amount`, `gst`, `total`, `opened_at`, `resolved_at`, `confirmed_by_name`, `customer_confirmed_at`, `charges`, `history`.
@@ -922,7 +922,7 @@ Call order and contracts:
 
 Priority **P1** · R14, R18.
 
-Display / special needs: Today/week/month switch; profit_asc reveals losses. Display every card, per-job revenue/material/install labour/warranty service cost/profit/margin, unfinished stages and open repairs. Advance totals count completed advance-type payments by paid_at. Hours count person-hours on completed installations plus per-visit labour, by finish/charge date in IST. Keep the returned share id with its URL for revocation; there is no share-list API. Shares are live summaries, not frozen snapshots.
+Display / special needs: Today/week/month switch; profit_asc reveals losses. Display every card, per-job revenue/material/install labour/warranty service cost/profit/margin, unfinished stages and open repairs. Advance totals count completed advance-type payments by paid_at. Hours count person-hours on completed installations plus per-visit labour, by finish/charge date in IST. Load GET /api/v1/dashboard/share (Director) to revoke active links by id. Paginated items contain id, period, expires_at, created_at only; URLs/tokens cannot be recovered. Shares are live summaries, not frozen snapshots.
 
 Button gates: Share expiry 1–168 hours. Revocation disables the link; public view is read-only.
 
@@ -2517,6 +2517,14 @@ Extra fields forbidden.
 | `quantity` | string | yes | — |
 | `start_date` | string (date) | yes | — |
 | `end_date` | string (date) | yes | — |
+
+## GAPS-1 wiring additions
+
+- Session: the default expiry is 480 minutes (eight hours); handle 401 by returning to login.
+- Parts selectors (Support, Technician, Office, Warehouse, Director; Admin override): GET `/api/v1/products` accepts `search` (case-insensitive SKU/name substring), optional `requires_serial`, `page` and `page_size` (1?100, default 20). Returns Page items with `id`, `sku`, `name`, `category`, Decimal-string `sale_price`, `gst_percent`, `in_stock`, and boolean `requires_serial`. Stock counts in-stock serial units for serialized products, otherwise inventory quantity on hand; absent stock is zero. Purchase costs are excluded.
+- Office repair intake/confirmation: GET `/api/v1/tickets` and GET `/api/v1/tickets/{ticket_id}` are available to Office; use the resolved status filter for the queue. Existing create/confirm rights remain; no new write rights.
+- Subsidy tracker: GET `/api/v1/subsidies/{subsidy_id}/documents/{doc_type}/file` uses Office/Director access (Admin override), returns file bytes with stored content type, or 404 `not_found`. Use authenticated fetch for download.
+- Director sharing: GET `/api/v1/dashboard/share?page=1&page_size=20` returns Page items containing only `id`, `period`, `expires_at`, `created_at`. Only unrevoked links with expiry strictly in the future appear. Empty pages are valid; retain the creation URL separately if needed.
 
 ## Frontend confirms
 
