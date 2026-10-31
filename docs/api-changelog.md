@@ -116,3 +116,72 @@ All endpoints below use `/api/v1` and allow warehouse, director, and admin. Erro
 - Response 200: all `DispatchRead` fields plus `{warranties_created: integer, warranties: WarrantyRead[]}`. Order becomes `delivered`.
 - Atomically creates one warranty per scanned serialized unit, or one per non-serial order line, for products with warranty_months > 0. Warranty dates start on the Asia/Kolkata delivery date; expiry adds calendar months and clamps to month end.
 - Errors: 409 `ALREADY_DELIVERED`, `DISPATCH_LOCKED` (not dispatched); common errors.
+
+## P1-3
+
+All paths use `/api/v1`. Admin is allowed in addition to the roles below. Common errors on protected endpoints: 401 `unauthorized`, 403 `forbidden`, 404 `not_found` for missing records, 422 `validation_error`. Money is sent as strings. Dates are ISO dates; timestamps are UTC. Ticket lists use `Page[TicketRead]` (`items,total,page,page_size`).
+
+### Ticket shapes
+- `TicketRead`: `id,ticket_number,customer_id,site_id,faulty_serial_unit_id,order_item_id,warranty_id,status,priority,fault_code,issue_description,under_warranty,coverage_label,assigned_to,visit_date,work_notes,labour_hours,parts_subtotal,labour_amount,gst,total,opened_at,resolved_at,confirmed_by_name,customer_confirmed_at,charges,history`.
+- Coverage label is `Under warranty – free` or `Out of warranty – billable`. Coverage is frozen at creation using the IST date, inclusive of the warranty end date. Voided warranties provide no coverage.
+- Charge: `id,charge_type,product_id,description,quantity,customer_price,cost_amount,covered_by_warranty,amount`. `customer_price` is the unit price; `amount` is quantity × unit price before GST. Warranty customer prices and amounts are zero. Internal part cost is retained.
+- History: existing audit-entry shape `{id,action,actor_user_id,actor_name,old_data,new_data,created_at}`; actor_name may be null. Flow: `open -> assigned -> resolved -> closed`; customer rejection returns `resolved -> open`.
+
+### GET /support/search?q=
+- Roles: support, office, director. No body; q required, 1–150 characters.
+- Response 200: up to 10 results, each `{customer:{id,name,phone,email},sites:[{id,address_line1,address_line2,city,state,pincode}],orders:[{id,number,status}],units:[{serialized_unit_id,serial,product,warranty_end,warranty_status,days_left}],open_tickets:[{id,ticket_number,status}]}`.
+- Phone variants normalize to E.164; otherwise exact normalized serial, then literal name prefix. Unit status is `active|expired`; days_left is nonnegative. Missing/voided warranty is expired, with null end if no warranty exists. Empty or unmatched search returns `[]`. Common errors only.
+
+### POST /tickets
+- Roles: support, office.
+- Body: `{customer_id,serialized_unit_id?:int|null,order_item_id?:int|null,fault_code:string|null,issue_description:string,priority?:low|normal|high|urgent}`. Exactly one target required; serialized products must use serialized_unit_id. Target must belong to the customer.
+- Response 201: `TicketRead`, numbered `TKT-{id:06d}`, status open, coverage set by the server. Common errors only.
+
+### GET /tickets
+- Roles: support, manager, director, technician. No body.
+- Query: optional `status`, `assigned_to_me=false`, `page=1`, `page_size=20` (max 100).
+- Response 200: `Page[TicketRead]`, newest first. Technicians always see their own assigned tickets, even when assigned_to_me=false. Common errors only.
+
+### GET /tickets/{id}
+- Roles: support, manager, director, technician (own only). No body.
+- Response 200: `TicketRead` including charges and audit history. Common errors only.
+
+### POST /tickets/{id}/assign
+- Roles: support, manager.
+- Body: `{technician_id:int,visit_date:date}`. Technician must be active with role technician.
+- Response 200: `TicketRead`, status assigned. Errors: 409 `TICKET_STATUS_INVALID` (not open); common errors.
+
+### POST /tickets/{id}/resolve
+- Roles: support, assigned technician.
+- Body: `{work_notes:string,labour_hours:Decimal,parts:[{product_id:int,qty:Decimal}]}`. Hours >=0 (max 2 decimal places); qty >0 (max 3 decimal places); duplicate products rejected. No serialized or service products as parts.
+- Response 200: `TicketRead`, status resolved. Parts consume stock even under warranty. Billable repairs use product sale prices/GST and configured labour rate/GST, rounded per line. Reopened tickets retain earlier charges and add new work; total hours across visits must fit 999.99.
+- Errors: 409 `TICKET_STATUS_INVALID`, `INSUFFICIENT_STOCK` (names product); common errors. Unauthorized technician gets 403. All changes roll back on failure.
+
+### POST /tickets/{id}/confirm
+- Roles: support, office.
+- Body: `{confirmed:bool,customer_name:string,note?:string|null}`.
+- Response 200: `TicketRead`. True closes and records the customer's name/time. False reopens and saves name/note in audit history. This is the only endpoint that closes tickets.
+- Errors: 409 `TICKET_STATUS_INVALID` (not resolved); common errors.
+
+### GET /dashboard/summary?period=today|week|month
+- Roles: director. No body; default period month.
+- Response 200: `{period,from_at,to_at,cards,profit_per_job,unfinished_jobs,open_repairs}`.
+- `cards`: `{new_enquiries,orders_confirmed,payments_received,profit,unfinished_jobs,open_repairs}`. New enquiries counts records created in period; orders/profit use confirmed_at. Payments use completed payments paid in period. Profit covers all matching orders, even beyond the list limit.
+- `profit_per_job`: at most 50 newest confirmed orders, each `{order_number,customer,system_kw,revenue,material_cost,labour_cost,profit,margin_percent}`. Revenue excludes GST; costs use order-item and crew-rate snapshots. All money/rates/percentages are strings.
+- `unfinished_jobs`: `{order_number,customer,stage,days_open}[]`; excludes installed/completed/cancelled orders. `open_repairs`: `{ticket_number,customer,under_warranty,status,days_open}[]`; excludes closed/cancelled tickets. Both queues span all periods. Days use IST calendar dates.
+- Period starts at IST midnight, Monday, or month start and ends now. Totals are SQL aggregates. Common errors only.
+
+### POST /dashboard/share
+- Roles: director. Body: `{period:today|week|month,expires_in_hours?:int=72}` (1–168).
+- Response 201: `{id,url:"/share/<token>",expires_at}`. Save id for revocation. Token is shown only in the URL; the database stores its SHA-256 hash. Common errors only.
+
+### DELETE /dashboard/share/{id}
+- Roles: director. No body. Response 204 with no body.
+- Errors: 409 `SHARE_ALREADY_REVOKED`; common errors.
+
+### GET /public/dashboard/{token}
+- Public: no login. No body or query.
+- Response 200: same `DashboardSummary` as the director endpoint, for the shared period. Read-only.
+- Unknown, expired, and revoked tokens all return identical 404 `not_found` responses. No application rate limiter exists on the current public enquiry route to reuse; Nginx rate limits are scheduled for P3-2.
+
+Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PERCENT=18` (Settings and .env.example).

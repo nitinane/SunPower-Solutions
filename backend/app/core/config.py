@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,6 +17,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost,http://localhost:5173"
     storage_dir: str = "/app/storage"
     max_upload_mb: int = 10
+    service_labour_rate_per_hour: Decimal = Decimal("500.00")
+    service_labour_gst_percent: Decimal = Decimal("18.00")
 
     @property
     def cors_origin_list(self) -> list[str]:

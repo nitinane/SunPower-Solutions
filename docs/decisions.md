@@ -30,3 +30,9 @@
 - P1-2 warranties: use the product's current `warranty_months` at delivery because the task explicitly specifies product warranty duration; start dates use the delivery timestamp in Asia/Kolkata.
 - P1-2 seed stock: insert missing rows only, preserving existing balances and serial statuses, because rerunning the seed must not replenish sold stock.
 - P1-2 delivery: also moves the order to `delivered` with an audit entry because subsequent installation and invoice workflows depend on delivery state.
+- P1-3 serialized replacement parts remain roadmap; repair parts must be non-serialized stock products because unit swaps need their own warranty and serial workflow.
+- P1-3 warranty charges store customer_price=0, while retaining quantities, hours and internal part costs, because the existing warranty_covered_no_customer_charge CHECK requires zero customer prices. Billable prices and GST rates are snapshotted in the resolution audit.
+- P1-3 reopened repairs retain previous charges and add each subsequent visit's parts, hours and totals because stock already consumed and work already done must not disappear; total labour hours are limited to the existing NUMERIC(5,2) column.
+- P1-3 dashboard reports from IST period start to now; unfinished installation and open repair queues span all periods because unresolved work must remain visible. Installed/completed/cancelled orders are excluded from unfinished installations.
+- P1-3 share creation returns its id alongside url and expires_at because the director needs that id to revoke the link; raw tokens are never stored or audited.
+- P1-3 support units without an active, non-voided warranty show expired with zero days_left (warranty_end may be null) because the API allows only active/expired coverage labels.
