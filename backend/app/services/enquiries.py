@@ -52,6 +52,11 @@ QUALIFIABLE_FROM = frozenset({EnquiryStatus.NEW, EnquiryStatus.CONTACTED})
 QUALIFICATION_OUTCOMES = frozenset(
     {EnquiryStatus.CONTACTED, EnquiryStatus.QUALIFIED, EnquiryStatus.UNQUALIFIED}
 )
+QUALIFY_REQUIRED_FIELDS = (
+    "shadow_free_roof_area_sqft",
+    "monthly_bill_amount",
+    "grid_connection_suitable",
+)
 ASSIGNEE_ROLES = frozenset({UserRole.OFFICE, UserRole.DIRECTOR, UserRole.ADMIN})
 
 AUDIT_FIELDS = (
@@ -273,14 +278,23 @@ def record_qualification(
             fields={"outcome": "Choose contacted, qualified or unqualified"},
         )
 
+    if outcome == EnquiryStatus.QUALIFIED:
+        missing = {
+            field: "Required to qualify"
+            for field in QUALIFY_REQUIRED_FIELDS
+            if getattr(data, field) is None
+        }
+        if missing:
+            raise ValidationFailed("Fill in the call checks before qualifying", fields=missing)
+
     now = _now()
     old = _snapshot(enquiry)
     changes: dict[str, Any] = {
-        "shadow_free_roof_area_sqft": data.shadow_free_roof_area_sqft,
-        "monthly_bill_amount": data.monthly_bill_amount,
-        "grid_connection_suitable": data.grid_connection_suitable,
-        "status": outcome,
+        field: getattr(data, field)
+        for field in QUALIFY_REQUIRED_FIELDS
+        if getattr(data, field) is not None
     }
+    changes["status"] = outcome
     if data.notes:
         changes["notes"] = _append_note(
             enquiry.notes, f"call by {actor.full_name}", data.notes, now

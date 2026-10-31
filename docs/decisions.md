@@ -22,5 +22,7 @@
 - quote line_total: qty x unit_price before GST, plus a separate `gst_amount` per line, because the spec computes GST per line and sums the quantized lines.
 - solar_packages.base_price: seeded as the sum of component sale prices (preview only; quotes always snapshot live product prices) because the column is NOT NULL.
 - GET /packages lives in the catalog router without a /catalog prefix because the spec path is /packages; price preview logic sits in services/catalog.py so the router does no DB work.
-- quote accept does not change the enquiry status because the spec doesn't ask for it.
+- quote accept: sets the enquiry to `converted` (+ `enquiry.converted` audit) because P1-1 asks for it (replaces the earlier "no change" decision).
 - 409 codes: SURVEY_NOT_APPROVED, PACKAGE_NOT_AVAILABLE, QUOTE_STATUS_INVALID, ORDER_ALREADY_EXISTS.
+- P1-1 installation job: uses `planned` with `scheduled_at=NULL` because it is the existing unscheduled state; pick lists use `draft` and `DSP-{id:06d}`.
+- P1-1 idempotency: reject a key belonging to another order with `IDEMPOTENCY_KEY_REUSED` because replay must never mix payment and order records.

@@ -8,7 +8,7 @@ Rules enforced here:
 - Every line snapshots sku, name, sale price, cost price, GST% and warranty, so later catalog
   price changes never touch an existing quote or order.
 - Accept: one order per quote (409 if one exists); every other open quote of the same
-  enquiry is cancelled in the same transaction.
+  enquiry is cancelled and the enquiry becomes converted, in the same transaction.
 Every change is written to audit_log in the same transaction.
 """
 
@@ -19,7 +19,7 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from app.core.enums import OrderStatus, QuoteStatus, SurveyStatus
+from app.core.enums import EnquiryStatus, OrderStatus, QuoteStatus, SurveyStatus
 from app.exceptions import BusinessRuleViolation, Conflict, NotFound
 from app.models.quotes import Quote, QuoteItem
 from app.models.users import User
@@ -296,6 +296,21 @@ def accept_quote(
             other.id,
             other_old,
             {**_snapshot(other), "reason": "another quote was accepted"},
+            meta,
+        )
+
+    enquiry = enquiry_repo.get_by_id_for_update(db, quote.enquiry_id)
+    if enquiry is not None and enquiry.status != EnquiryStatus.CONVERTED:
+        old_status = enquiry.status
+        enquiry_repo.update(db, enquiry, {"status": EnquiryStatus.CONVERTED})
+        _audit(
+            db,
+            actor,
+            "enquiry.converted",
+            "enquiry",
+            enquiry.id,
+            {"status": old_status},
+            {"status": enquiry.status, "order_id": order.id},
             meta,
         )
 

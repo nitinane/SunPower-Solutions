@@ -3,9 +3,6 @@
 ## Open
 
 
-1. **Part 1 (orders) code is not built.** `app/services/orders.py`, `app/repositories/orders.py`
-   and `app/api/routes/orders.py` are stubs. Nothing creates the pick list (dispatch row in
-   its first status) after the first payment. Not a schema item; schema support is in place.
 2. *(nice to have, not in Phase 1 spec)* `dispatches.delivered_by` — audit log covers it for now.
 
 ## Mappings (confirmed, no change needed)
@@ -20,6 +17,8 @@
 | stock_movements quantity / created_by | `quantity_delta` (signed) / `performed_by` |
 
 ## Done
+
+- P1-1 orders implementation: first payment creates the dispatch pick list and unscheduled installation job in the payment transaction. Previous non-schema implementation note resolved.
 
 - P1-1 MANAGER role: added `UserRole.MANAGER` and extended the `users.role` allowed-value CHECK in migration `a19b2d05eaa9`. Existing VARCHAR(30) column unchanged; no data removed. Upgrade, downgrade, upgrade verified; 69 tests pass.
 

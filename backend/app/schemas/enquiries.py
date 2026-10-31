@@ -95,17 +95,19 @@ class EnquiryQualify(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    shadow_free_roof_area_sqft: Decimal = Field(
+    shadow_free_roof_area_sqft: Decimal | None = Field(
+        default=None,
         gt=Decimal("0"),
         max_digits=8,
         decimal_places=2,
     )
-    monthly_bill_amount: Decimal = Field(
+    monthly_bill_amount: Decimal | None = Field(
+        default=None,
         ge=Decimal("0"),
         max_digits=12,
         decimal_places=2,
     )
-    grid_connection_suitable: bool
+    grid_connection_suitable: bool | None = None
     outcome: Literal["qualified", "unqualified", "contacted"]
     notes: str | None = Field(default=None, max_length=5000)
 
