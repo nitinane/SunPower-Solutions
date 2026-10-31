@@ -24,7 +24,6 @@ export function SharedSidebar() {
   }
   if (canSee(role, ['manager'])) {
     realWorkspaces.push({ icon: 'calendar_month', label: 'Crew Schedule', path: '/manager/schedule' })
-    realWorkspaces.push({ icon: 'fact_check', label: 'Survey Review', path: '/manager/surveys' })
   }
   if (canSee(role, ['support'])) realWorkspaces.push({ icon: 'support', label: 'Support', path: '/support' })
   const operations: NavItem[] = []

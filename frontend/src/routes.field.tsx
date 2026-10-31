@@ -4,7 +4,7 @@ import { Dispatches, DispatchDetail } from './pages/warehouse/Dispatches';
 import { Receiving } from './pages/warehouse/Receiving';
 import { TodayPage, SurveyPage, JobPage } from './pages/technician/FieldPages';
 import { TicketPage } from './pages/field/TicketPage';
-import { SchedulePage, ManagerSurveys } from './pages/manager/ManagerPages';
+import { SchedulePage } from './pages/manager/ManagerPages';
 export const fieldRoutes: RouteObject[] = [
     { element: <Guard roles={['warehouse', 'director']}/>, children: [
             { path: '/warehouse/dispatches', element: <Dispatches /> },
@@ -18,7 +18,6 @@ export const fieldRoutes: RouteObject[] = [
             { path: '/technician/tickets/:id', element: <TicketPage technician/> },
         ] },
     { element: <Guard roles={['manager']}/>, children: [
-            { path: '/manager/surveys', element: <ManagerSurveys /> },
             { path: '/manager/schedule', element: <SchedulePage /> },
         ] },
     { element: <Guard roles={['support']}/>, children: [

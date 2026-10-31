@@ -110,3 +110,5 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - AUDIT evidence: DONE means the core backend rule has a passing test, while mobile/customer installation acceptance, printable/sendable invoices and verified live deployment remain PARTIAL because backend JSON/tests alone do not prove those user-facing outcomes.
 
 Session length: default JWT expiry is 480 minutes to cover an eight-hour shift.
+
+- Frontend fonts: allow Google Fonts styles and font files in the main CSP because the application loads them from fonts.googleapis.com and fonts.gstatic.com.
