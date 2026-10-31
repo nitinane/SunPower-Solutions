@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_db, require_role
 from app.core.enums import EnquirySource, EnquiryStatus, UserRole
 from app.models.users import User
+from app.schemas.auth import AuditEntryRead
 from app.schemas.common import Page
 from app.schemas.enquiries import (
     EnquiryAssign,
@@ -29,6 +30,7 @@ from app.schemas.enquiries import (
     EnquiryStaffCreate,
 )
 from app.services import enquiries as enquiry_service
+from app.services import history as history_service
 from app.services.enquiries import RequestMeta
 
 router = APIRouter(prefix="/enquiries", tags=["enquiries"])
@@ -184,3 +186,14 @@ def close_enquiry(
         db, enquiry_id, data, actor=actor, meta=_meta(request)
     )
     return enquiry_service.to_read(enquiry)
+
+
+
+@router.get(
+    "/{enquiry_id}/history",
+    response_model=list[AuditEntryRead],
+    summary="Timeline of everything that happened to this enquiry",
+)
+def enquiry_history(enquiry_id: EnquiryId, db: DbSession, actor: StaffUser) -> list[AuditEntryRead]:
+    enquiry_service.get_enquiry(db, enquiry_id)  # 404 if it does not exist
+    return history_service.list_history(db, "enquiry", enquiry_id)

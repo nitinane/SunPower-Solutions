@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.auth import AuditLog
+from app.models.users import User
 
 
 def add_audit(
@@ -39,12 +40,13 @@ def add_audit(
 
 def list_for_entity(
     db: Session, entity_type: str, entity_id: int, limit: int = 100
-) -> list[AuditLog]:
-    """History of one record, oldest first (for a timeline on the detail screen)."""
+) -> list[tuple[AuditLog, str | None]]:
+    """History of one record, oldest first, with the name of who did each step."""
     stmt = (
-        select(AuditLog)
+        select(AuditLog, User.full_name)
+        .outerjoin(User, User.id == AuditLog.actor_user_id)
         .where(AuditLog.entity_type == entity_type, AuditLog.entity_id == entity_id)
         .order_by(AuditLog.created_at, AuditLog.id)
         .limit(limit)
     )
-    return list(db.scalars(stmt))
+    return [(row[0], row[1]) for row in db.execute(stmt).all()]
