@@ -48,16 +48,21 @@ def create_app() -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         return response
 
+    @application.get("/health")
     @application.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @application.get("/health/ready")
     @application.get("/api/health/ready")
     def readiness() -> dict[str, str]:
         try:
             with SessionLocal() as session:
                 session.execute(text("SELECT 1"))
-            redis.Redis.from_url(settings.redis_url, socket_connect_timeout=2).ping()
+            with redis.Redis.from_url(
+                settings.redis_url, socket_connect_timeout=2, socket_timeout=2
+            ) as cache:
+                cache.ping()
         except Exception as exc:
             logger.exception("Readiness check failed")
             raise HTTPException(status_code=503, detail="A dependency is unavailable") from exc

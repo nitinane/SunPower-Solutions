@@ -1,0 +1,60 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.9-alpine
+        env:
+          POSTGRES_USER: sunpower
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: sunpower_test
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U sunpower -d sunpower_test" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.3-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://sunpower:ci_password@localhost:5432/sunpower_test
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci_only_secret_not_for_production
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: ruff check app tests
+      - run: alembic upgrade head
+      - run: python -m pytest -q
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.production.example .env
+      - run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q

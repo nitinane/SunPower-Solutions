@@ -19,7 +19,7 @@ from app.repositories import users as user_repo
 from app.services.common import RequestMeta
 
 SESSION_COOKIE = "sp_session"
-SESSION_COOKIE_PATH = "/api"
+SESSION_COOKIE_PATH = "/"
 
 
 def get_db() -> Generator[Session, None, None]:

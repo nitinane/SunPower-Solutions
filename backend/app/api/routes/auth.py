@@ -5,7 +5,7 @@ The session token travels only in an httpOnly cookie:
 - httponly  -> JavaScript can't read it (XSS can't steal it)
 - samesite  -> browsers don't send it from other sites (CSRF protection)
 - secure    -> HTTPS only in production
-- path=/api -> only sent to the API
+- path=/ -> available across the application
 """
 
 from typing import Annotated
@@ -45,20 +45,20 @@ def login(data: LoginRequest, response: Response, db: DbSession, meta: Meta) -> 
         max_age=settings.jwt_expire_minutes * 60,
         httponly=True,
         secure=_cookie_is_secure(),
-        samesite="strict",
+        samesite="lax",
         path=SESSION_COOKIE_PATH,
     )
     return LoginResponse(user=CurrentUser.model_validate(result.user), expires_at=result.expires_at)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Log out")
-def logout(response: Response) -> None:
+def logout(response: Response, user: Annotated[User, Depends(get_current_user)]) -> None:
     response.delete_cookie(
         key=SESSION_COOKIE,
         path=SESSION_COOKIE_PATH,
         httponly=True,
         secure=_cookie_is_secure(),
-        samesite="strict",
+        samesite="lax",
     )
 
 

@@ -13,8 +13,13 @@ dist/
 .ruff_cache/
 .coverage
 htmlcov/
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.zip
+
+.env.*
+!.env.production.example
+!.env.example

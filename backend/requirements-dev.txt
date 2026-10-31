@@ -2,3 +2,4 @@
 pytest==8.4.0
 httpx==0.28.1
 ruff==0.11.13
+pip-audit==2.9.0

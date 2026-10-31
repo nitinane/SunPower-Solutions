@@ -1,7 +1,7 @@
-FROM node:22.14.0-alpine AS build
+FROM node:20.18.0-alpine AS build
 WORKDIR /app
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 FROM nginx:1.27.5-alpine

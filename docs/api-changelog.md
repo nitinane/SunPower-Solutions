@@ -185,3 +185,11 @@ All paths use `/api/v1`. Admin is allowed in addition to the roles below. Common
 - Unknown, expired, and revoked tokens all return identical 404 `not_found` responses. No application rate limiter exists on the current public enquiry route to reuse; Nginx rate limits are scheduled for P3-2.
 
 Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PERCENT=18` (Settings and .env.example).
+
+## P3-2
+- POST /api/v1/auth/login: public; request {email, password}, response {user, expires_at} unchanged. Session cookie now HttpOnly, SameSite=Lax, Path=/, Secure in production. Existing authentication errors unchanged.
+- POST /api/v1/auth/logout: any authenticated role; no body; 204, now 401 without a session. Cookie deletion uses matching flags and path.
+- GET /health and existing GET /api/health: public, no body, 200 {status: "ok"}.
+- GET /health/ready and existing GET /api/health/ready: public, no body, 200 {status: "ready", database: "ok", redis: "ok"}; 503 http_error if DB or Redis fails.
+- All endpoints: unexpected 500 responses contain error {code: "internal_error", message, request_id} and X-Request-ID; exception details stay in server logs.
+- Production: same-origin requests only; Nginx adds security headers, caps request bodies at 6 MB, limits login to 5/minute (burst 5), general API to 10/second (burst 20).

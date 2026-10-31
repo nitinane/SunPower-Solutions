@@ -78,10 +78,10 @@ async def handle_unexpected_error(request: Request, exc: Exception) -> JSONRespo
         "Unhandled error",
         extra={"request_id": getattr(request.state, "request_id", None), "path": request.url.path},
     )
-    return JSONResponse(
-        status_code=500,
-        content=error_body("internal_error", "Something went wrong. Please try again."),
-    )
+    request_id = getattr(request.state, "request_id", "unknown")
+    body = error_body("internal_error", "Something went wrong. Please try again.")
+    body["error"]["request_id"] = request_id
+    return JSONResponse(status_code=500, content=body, headers={"X-Request-ID": request_id})
 
 
 def register_exception_handlers(app: FastAPI) -> None:

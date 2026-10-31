@@ -36,3 +36,8 @@
 - P1-3 dashboard reports from IST period start to now; unfinished installation and open repair queues span all periods because unresolved work must remain visible. Installed/completed/cancelled orders are excluded from unfinished installations.
 - P1-3 share creation returns its id alongside url and expires_at because the director needs that id to revoke the link; raw tokens are never stored or audited.
 - P1-3 support units without an active, non-voided warranty show expired with zero days_left (warranty_end may be null) because the API allows only active/expired coverage labels.
+
+P3-2: Retain the existing Compose service name web; Caddy proxies to web:80 because it already hosts Nginx.
+P3-2: ENVIRONMENT takes precedence over legacy ENV; production disables CORS and development permits only localhost:5173.
+P3-2: Upgrade FastAPI to permit patched Starlette 1.3.1; pin PyJWT 2.14.0 and python-multipart 0.0.30 to fix high/critical advisories, retaining medium/low findings per task scope.
+P3-2: Add frontend Node type definitions and a lockfile because the existing Vite configuration uses process and production requires npm ci.
