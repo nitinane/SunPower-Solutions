@@ -32,9 +32,11 @@ Append to docs/api-changelog.md a section `## <task id>` listing every new or ch
 - [x] P3-2 — Security pass, production deploy files, CI  (done early on purpose: deploy early)
 - [x] P2-1 — Crew schedule + installation form
 - [x] P2-2 — Invoices
+- [ ] P2-4 — Stock receiving, warranty replacement, after-sales cost in profit
 - [x] P2-3 — Subsidy tracking + technician pay
 - [ ] P3-1 — Test database, rule coverage, demo seed, load test
 - [ ] P3-3 — README, diagrams, demo script, review prep, fresh-clone check
+- [ ] AUDIT — Problem-statement coverage + frontend checklist
 
 ---
 
@@ -476,7 +478,7 @@ Add pytest-cov (pinned) to requirements-dev.txt; report coverage for app/service
 
 STEP 3 — Demo seed: scripts/seed_demo.py (idempotent: skip if the customer "Ravi Kumar (demo)" exists)
 - One login per role: director, manager, office, warehouse, 3 technicians, support. Password from env DEMO_PASSWORD (add to .env.example). Never print passwords.
-- Customers at every stage, created THROUGH THE SERVICE FUNCTIONS so rules and audit run, with Hyderabad addresses and Indian names: 1 new enquiry (2 days old, overdue), 1 qualified awaiting survey, 1 survey awaiting approval, 1 quote sent, 1 paid awaiting dispatch, 1 delivered awaiting installation, 2 installations completed this month (with crew hours), 1 installed 3 years ago whose inverter warranty has EXPIRED with an open repair ticket, 1 in-warranty ticket resolved and waiting for customer confirmation, 1 closed paid repair with its invoice, 2 subsidy applications at different steps, 1 draft pay run for last month.
+- Customers at every stage, created THROUGH THE SERVICE FUNCTIONS so rules and audit run, with Hyderabad addresses and Indian names: 1 new enquiry (2 days old, overdue), 1 qualified awaiting survey, 1 survey awaiting approval, 1 quote sent, 1 paid awaiting dispatch, 1 delivered awaiting installation, 2 installations completed this month (with crew hours), 1 installed 3 years ago whose inverter warranty has EXPIRED with an open repair ticket, 1 in-warranty ticket resolved and waiting for customer confirmation, 1 closed paid repair with its invoice, 2 subsidy applications at different steps, 1 draft pay run for last month, 1 stock receipt with serials from a supplier, and 1 under-warranty ticket where the inverter was replaced.
 - Old dates: set timestamp columns directly AFTER the service call, only in this script.
 - Demo reset: scripts/demo_reset.ps1 AND a Makefile target demo-reset: docker compose down -v; up -d (wait healthy); alembic upgrade head; seed; seed_demo.
 
@@ -503,7 +505,7 @@ STEP 1 — README.md at the repo root (replace the stub; keep anything already t
 9. Security: what P3-2 did.
 10. Testing: what's covered, how to run, coverage, load test summary.
 11. How it scales: stateless API -> `docker compose up --scale api=3` behind Nginx; indexes on phone/serial; the DB is the real bottleneck -> PgBouncer, a read replica for the dashboard; a queue for SMS/WhatsApp later; Kubernetes only when needed.
-12. Roadmap (left out on purpose): instant estimate, QR complaint stickers, customer tracking link, AI call sheet, WhatsApp Business API, SMS (needs DLT registration), credit notes, HSN codes on invoices, swapping serialized parts in repairs.
+12. Roadmap (left out on purpose): instant estimate, QR complaint stickers, customer tracking link, AI call sheet, WhatsApp Business API, SMS (needs DLT registration), credit notes, HSN codes on invoices.
 13. Key decisions: link docs/decisions.md and list the 8 most important as one-liners.
 
 STEP 2 — docs/demo-script.md: a 5-minute script by role using the demo seed: exact screen, exact click, one sentence to say. The 7 "wow" moments: (1) quote blocked without an approved survey, (2) one payment creates the pick list + crew job, (3) wrong serial rejected live, (4) delivery creates warranties + invoice, (5) serial search -> expired warranty -> billed automatically, (6) ticket closes only on customer confirmation, (7) dashboard profit per job + share link. A Swagger (/docs) fallback for each step if the UI fails.
@@ -517,6 +519,99 @@ STEP 4 — Fresh-clone check (report every command and its result)
 
 Commit: "docs: readme, diagrams, demo script, review prep"
 Report must end with the user's final checklist: push, deploy latest on the server, run demo reset on the server, rehearse the demo script twice.
+
+---
+
+## P2-4 — Stock receiving, warranty replacement, after-sales cost in profit
+
+CONTEXT
+The problem statement (docs/problem-statement.pdf) says: each inverter, battery and charge controller has its own serial number; under warranty "the repair OR REPLACEMENT should cost the customer nothing"; the director wants to see stock purchases and which installations LOST money. Today serials only come from the seed, repairs can't swap a serialized unit, and profit ignores warranty costs. Also update the decisions.md line that put the unit swap on the roadmap.
+
+STEP 1 — Read only these
+app/models/inventory.py, app/models/catalog.py, app/models/warranties.py, app/models/service_tickets.py, app/services/dispatch.py, app/services/tickets.py, app/repositories/dashboard.py, docs/decisions.md.
+
+STEP 2 — DB check (if anything is missing: db-requests.md and STOP)
+- stock_receipts: receipt_number UNIQUE, supplier_name, supplier_invoice_ref, received_on, created_by
+- stock_receipt_lines: receipt_id, product_id, qty, unit_cost NUMERIC(12,2)
+- a serialized_units status meaning "returned faulty"
+- warranties: replaced_by_warranty_id NULL (or replaced_at NULL)
+- ticket_charges: serialized_unit_id NULL and unit_cost NULL (cost to the company, for profit)
+
+PART A — Stock receiving (roles WAREHOUSE, DIRECTOR)
+POST /stock/receipts {supplier_name, supplier_invoice_ref, received_on, lines: [{product_id, qty, unit_cost, serials?: [...]}]}
+GET  /stock/receipts?from=&to=&page=;  GET /stock/receipts/{id}
+GET  /stock   roles WAREHOUSE, OFFICE, DIRECTOR: per product: on hand (serial products = units in stock), low_stock flag (below 5 for serial products, below 50 otherwise; or products.reorder_level if it exists)
+Rules, one transaction:
+1. unit_cost > 0, qty > 0.
+2. requires_serial products: serials required, count == qty (else 422 SERIAL_COUNT_MISMATCH), normalized, no duplicates in the request, none already in the DB (else 409 SERIAL_EXISTS listing them). Create the units in stock.
+3. Other products: lock or create the inventory row, quantity += qty.
+4. One stock_movement (type in, reference = receipt) per line.
+5. products.cost_price = this line's unit_cost (latest purchase cost; one line in decisions.md).
+6. Number RCV-{id:06d} (same pattern as ORD). Audit.
+
+PART B — Warranty replacement of a serialized unit
+POST /tickets/{id}/replace-unit {new_serial}   roles: the assigned technician, SUPPORT. Ticket ASSIGNED and has a faulty serial unit, else 409.
+Rules, one transaction (lock the ticket):
+1. new_serial normalized; must exist (404), be in stock (409 SERIAL_NOT_IN_STOCK) and be the SAME product as the faulty unit (409 SERIAL_WRONG_PRODUCT).
+2. Faulty unit -> returned-faulty status. New unit -> the same status as a delivered unit. stock_movement out (type service, reference = ticket).
+3. Under warranty: the old warranty gets replaced_by; the new unit gets a warranty from today with the SAME end_date as the old one (replacement covers the remaining period). Charge row: part, customer_price 0.00, unit_cost = product cost_price.
+4. Not under warranty: the customer buys the unit: charge row at sale price + GST; the new unit gets a full warranty from today (warranty_months).
+5. Audit unit.replaced with old and new serials. Support search by the new serial must find the customer.
+
+PART C — After-sales cost in profit
+Dashboard profit_per_job gets warranty_service_cost = for under-warranty tickets on that order: sum(charge unit_cost x qty) + labour_hours x the technician's hourly_rate. profit = revenue - material - install labour - warranty_service_cost. Add ?sort=profit_asc so loss-making jobs come first. Add a card stock_purchases = sum(qty x unit_cost) of receipts in the period. Still one SQL query per block.
+
+TESTS: tests/test_stock.py, tests/test_replacement.py, extend tests/test_dashboard.py
+- receipt: serial count mismatch -> 422; serial already exists -> 409; inventory increases; movements written; cost_price updated
+- replacement: wrong product -> 409; under warranty -> free, new warranty end == old end, old unit not in stock, search by new serial finds the customer; out of warranty -> billed sale price + GST exactly, full new warranty
+- dashboard: a job with a free warranty replacement shows lower (or negative) profit; profit_asc puts it first; stock_purchases card exact
+
+SIMPLE version: Parts A and B only.
+Commit: "feat(stock,tickets): stock receiving, warranty replacement, after-sales cost in profit"
+
+---
+
+## AUDIT — Problem-statement coverage + frontend checklist
+
+CONTEXT
+Prove we built the whole problem statement (docs/problem-statement.pdf), fix small gaps, then produce the exact checklist the frontend teammate needs so every backend feature is usable.
+
+Requirements from the PDF:
+R1 Enquiries from web form, WhatsApp and calls land with sales straight away (name, phone, address, needs incl. kW and subsidy) and never vanish.
+R2 Qualification call: shadow-free roof space, monthly bill, grid connection suitable.
+R3 Technician survey: roof direction, tilt, cable distance; approval.
+R4 Quote only after the survey is approved.
+R5 Quote from a ready template; the exact parts list follows automatically; packages: panel set, on-grid 1-5 kW, off-grid 1-5 kW (+ battery), installation service.
+R6 Advance or full payment confirms the order.
+R7 On confirmation the warehouse knows what to pack and the crew sees the job on its schedule, with nobody phoning.
+R8 Every inverter, battery and charge controller scanned before leaving; known which unit went to which customer.
+R9 Warranty starts by itself on delivery for every unit (2 years inverter/battery, 20 years panels).
+R10 Install form on phone/tablet: start and finish times, confirm system size, power test, roof photos, homeowner signs on screen; the customer sees what was installed.
+R11 Support finds the customer and the exact inverter serial within seconds and sees the warranty.
+R12 Under warranty, repair or replacement is free; otherwise parts and labour are billed automatically.
+R13 The complaint is a ticket until the customer confirms everything works.
+R14 Director: which jobs made or lost money, what is unfinished; advance payments, stock purchases, technician hours.
+R15 Invoices to send.
+R16 Government subsidy paperwork tracked.
+R17 Technicians paid from their hours.
+R18 Today / this week / this month, incl. profit per job and open repairs; shareable.
+R19 Customers are homes and small factories.
+R20 Production-ready: deployed, secure, tested.
+
+STEP 1 — For each R: find the evidence: endpoints (method + path), service function, and the tests that prove it. Run the full test suite once.
+STEP 2 — docs/ps-coverage.md: table R# | requirement | DONE / PARTIAL / MISSING | endpoints | tests | gap. Strict: DONE only if a passing test proves the core rule.
+STEP 3 — Fix each PARTIAL/MISSING that takes under 30 minutes, with tests, following CLAUDE.md (DB changes -> db-requests.md and STOP as usual). Anything bigger goes under "Roadmap" in docs/ps-coverage.md with one honest line. If anything changed, update README's feature list and roadmap. Re-run tests.
+STEP 4 — docs/frontend-checklist.md for the frontend teammate, generated from the REAL routes (GET /openapi.json), never from memory:
+- Global: base URL /api/v1; cookie auth (fetch with credentials: "include"); 401 -> login, 403 -> "no access" screen; error shape {"error": {code, message, fields}}; money arrives as strings (show ₹ with en-IN grouping, never float maths); timestamps are UTC, show in IST; pagination shape; role -> home screen map; demo logins (roles only).
+- Then by role (Public, Login, Office/Sales, Manager, Technician, Warehouse, Support, Director), one block per screen:
+  name; priority (P1 = demo chain, P2 = rest of PDF, P3 = nice); which R# it serves;
+  endpoints in call order (method, path); request fields with type, required, allowed enum values, min/max;
+  response fields to display;
+  every 409/422 code it can get -> the plain message to show;
+  states: loading, empty, error, success; which buttons stay disabled until valid (e.g. Send disabled until all serials scanned);
+  special needs where relevant: camera scan (html5-qrcode) with typed fallback, signature pad (PNG base64, not blank), photo upload (max 5 MB, jpg/png/webp), print view (quote, invoice), share link, inbox auto-refresh, works on a 360px phone (technician, warehouse).
+- End with "## Frontend confirms": one checkbox line per screen plus the global items, each to be answered Done / Partly / Not started / Blocked (why).
+STEP 5 — Commit "docs: ps coverage audit + frontend checklist". Report: DONE/PARTIAL/MISSING counts, what was fixed, roadmap items, path of the checklist.
 
 ---
 
