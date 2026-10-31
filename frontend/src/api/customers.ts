@@ -1,2 +1,8 @@
-/** customers API stub. */
-export {}
+import { apiFetch } from './client'
+
+export type Page<T> = { items: T[]; total: number; page: number; page_size: number }
+export type Site = { id: number; customer_id: number; site_name: string | null; address_line1: string; address_line2: string | null; locality: string | null; city: string; state: string; pincode: string; latitude: string | null; longitude: string | null; electricity_consumer_number: string | null; created_at: string; updated_at: string }
+export type CustomerListItem = { id: number; full_name: string; phone_e164: string; email: string | null; created_at: string; site_count: number; order_count: number }
+export type Customer = CustomerListItem & { created_by: number | null; updated_at: string; sites: Site[]; enquiries: { id: number; status: string; source: string; contact_name: string; created_at: string }[]; orders: { id: number; order_number: string; status: string; created_at: string }[]; installations: { id: number; order_id: number; site_id: number; status: string; scheduled_at: string | null; completed_at: string | null }[]; warranties: { id: number; order_id: number; product_id: number; start_date: string; end_date: string; voided_at: string | null }[] }
+export function getCustomers(params: { page: number; page_size: number; search?: string }) { const query = new URLSearchParams({ page: String(params.page), page_size: String(params.page_size) }); if (params.search) query.set('search', params.search); return apiFetch<Page<CustomerListItem>>(`/customers?${query}`) }
+export function getCustomer(id: string | number) { return apiFetch<Customer>(`/customers/${id}`) }

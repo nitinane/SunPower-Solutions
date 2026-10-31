@@ -1,2 +1,3 @@
-import { Link, Outlet } from 'react-router-dom'
-export function MobileLayout() { return <><header className="placeholder"><Link to="/">← SunPower Solutions</Link><p>Technician workspace</p></header><Outlet /></> }
+import { Outlet } from 'react-router-dom'
+import { SharedSidebar } from '../components/SharedSidebar'
+export function MobileLayout() { return <div className="shared-layout"><SharedSidebar /><main className="shared-layout-content"><Outlet /></main></div> }

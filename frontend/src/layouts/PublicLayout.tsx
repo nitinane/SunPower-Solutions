@@ -1,2 +1,3 @@
-import { Link, Outlet } from 'react-router-dom'
-export function PublicLayout() { return <><header className="placeholder"><Link to="/">← SunPower Solutions</Link></header><Outlet /></> }
+import { Outlet } from 'react-router-dom'
+import { SharedSidebar } from '../components/SharedSidebar'
+export function PublicLayout() { return <div className="shared-layout"><SharedSidebar /><main className="shared-layout-content"><Outlet /></main></div> }

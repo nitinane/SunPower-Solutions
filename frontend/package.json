@@ -9,6 +9,7 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.105.0",
     "html5-qrcode": "2.3.8",
     "react": "19.1.1",
     "react-dom": "19.1.1",
