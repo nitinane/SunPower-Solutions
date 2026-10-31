@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import PaymentMethod, PaymentStatus, PaymentType, sql_in
@@ -21,6 +21,12 @@ class Payment(IdMixin, TimestampMixin, Base):
         CheckConstraint(sql_in("status", PaymentStatus), name="status_allowed"),
         CheckConstraint(sql_in("payment_type", PaymentType), name="payment_type_allowed"),
         Index("uq_payments_idempotency_key", "idempotency_key", unique=True),
+        Index(
+            "uq_payments_reference_number",
+            "reference_number",
+            unique=True,
+            postgresql_where=text("reference_number IS NOT NULL"),
+        ),
         Index("ix_payments_order_id", "order_id"),
         Index("ix_payments_ticket_id", "ticket_id"),
     )

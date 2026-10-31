@@ -181,6 +181,7 @@ class StockMovementReason(StrEnum):
     ADJUSTMENT = "adjustment"
     PURCHASE = "purchase"
     DAMAGE = "damage"
+    SERVICE = "service"          # part used on a service ticket
 
 
 # ---------------------------------------------------------------- Installation

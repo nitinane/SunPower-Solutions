@@ -1,10 +1,12 @@
 """Confirmed orders and copied quote line snapshots."""
 
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    DateTime,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -45,6 +47,7 @@ class Order(IdMixin, TimestampMixin, Base):
         String(24), nullable=False, server_default="pending_payment"
     )
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OrderItem(IdMixin, TimestampMixin, Base):
@@ -67,6 +70,7 @@ class OrderItem(IdMixin, TimestampMixin, Base):
             name="fk_order_item_quote_product_match",
         ),
         UniqueConstraint("id", "order_id", "product_id", name="uq_order_items_id_order_product"),
+        UniqueConstraint("id", "product_id", name="uq_order_items_id_product"),
         Index("ix_order_items_order_id", "order_id"),
     )
 

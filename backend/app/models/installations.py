@@ -33,6 +33,7 @@ class InstallationJob(IdMixin, TimestampMixin, Base):
             ondelete="RESTRICT",
             name="fk_job_order_site_match",
         ),
+        UniqueConstraint("order_id", name="uq_installation_jobs_order_id"),
         Index("ix_installation_jobs_scheduled_status", "scheduled_at", "status"),
     )
 

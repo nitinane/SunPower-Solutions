@@ -12,6 +12,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,6 +25,12 @@ class Dispatch(IdMixin, TimestampMixin, Base):
     __tablename__ = "dispatches"
     __table_args__ = (
         CheckConstraint(sql_in("status", DispatchStatus), name="status_allowed"),
+        CheckConstraint(
+            f"status <> '{DispatchStatus.DELIVERED.value}' "
+            "OR (receiver_name IS NOT NULL AND delivered_at IS NOT NULL)",
+            name="delivered_has_receiver",
+        ),
+        UniqueConstraint("order_id", name="uq_dispatches_order_id"),
         Index("ix_dispatches_order_status", "order_id", "status"),
     )
 
@@ -35,6 +42,7 @@ class Dispatch(IdMixin, TimestampMixin, Base):
     dispatched_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    receiver_name: Mapped[str | None] = mapped_column(String(150))
 
 
 class DispatchItem(IdMixin, TimestampMixin, Base):

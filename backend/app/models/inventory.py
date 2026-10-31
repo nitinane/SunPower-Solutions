@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -44,6 +45,10 @@ class StockMovement(IdMixin, Base):
     __table_args__ = (
         CheckConstraint("quantity_delta <> 0", name="quantity_delta_nonzero"),
         CheckConstraint(sql_in("reason", StockMovementReason), name="reason_allowed"),
+        CheckConstraint(
+            "(reference_type IS NULL) = (reference_id IS NULL)", name="reference_pair"
+        ),
+        Index("ix_stock_movements_reference", "reference_type", "reference_id"),
         Index("ix_stock_movements_product_created", "product_id", "created_at"),
         Index(
             "uq_stock_movements_idempotency_key",
@@ -62,6 +67,8 @@ class StockMovement(IdMixin, Base):
     note: Mapped[str | None] = mapped_column(Text)
     performed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     idempotency_key: Mapped[str | None] = mapped_column(String(100))
+    reference_type: Mapped[str | None] = mapped_column(String(30))
+    reference_id: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
@@ -77,7 +84,7 @@ class SerializedUnit(IdMixin, TimestampMixin, Base):
         CheckConstraint(sql_in("status", SerialUnitStatus), name="status_allowed"),
         UniqueConstraint("product_id", "serial_number", name="uq_serialized_units_product_serial"),
         UniqueConstraint("id", "product_id", name="uq_serialized_units_id_product"),
-        Index("ix_serialized_units_serial_number", "serial_number"),
+        Index("ix_serialized_units_serial_number", "serial_number", unique=True),
         Index("ix_serialized_units_product_status", "product_id", "status"),
     )
 

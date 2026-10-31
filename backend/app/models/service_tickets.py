@@ -1,12 +1,13 @@
 """Customer support tickets, charges, and technician work logs."""
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -37,7 +38,15 @@ class SupportTicket(IdMixin, TimestampMixin, Base):
             ondelete="RESTRICT",
             name="fk_ticket_site_customer_match",
         ),
+        CheckConstraint(
+            "labour_hours IS NULL OR labour_hours >= 0", name="labour_hours_nonnegative"
+        ),
+        CheckConstraint(
+            "parts_subtotal >= 0 AND labour_amount >= 0 AND gst >= 0 AND total >= 0",
+            name="amounts_nonnegative",
+        ),
         Index("ix_support_tickets_customer_status", "customer_id", "status"),
+        Index("ix_support_tickets_status", "status"),
         Index("ix_support_tickets_site_id", "site_id"),
         Index(
             "uq_support_tickets_idempotency_key",
@@ -73,6 +82,20 @@ class SupportTicket(IdMixin, TimestampMixin, Base):
     assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     customer_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     confirmed_by_name: Mapped[str | None] = mapped_column(String(150))
+    order_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("order_items.id", ondelete="RESTRICT")
+    )
+    visit_date: Mapped[date | None] = mapped_column(Date)
+    work_notes: Mapped[str | None] = mapped_column(Text)
+    labour_hours: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    parts_subtotal: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
+    )
+    labour_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
+    )
+    gst: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
+    total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
 
 
 class TicketCharge(IdMixin, TimestampMixin, Base):
