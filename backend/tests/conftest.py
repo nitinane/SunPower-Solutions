@@ -67,6 +67,14 @@ def _reset_and_seed() -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
+def test_storage(tmp_path_factory):
+    original_storage_dir = settings.storage_dir
+    settings.storage_dir = str(tmp_path_factory.mktemp("storage"))
+    yield
+    settings.storage_dir = original_storage_dir
+
+
+@pytest.fixture(scope="session", autouse=True)
 def test_database():
     assert make_url(settings.database_url).database.endswith("_test")
     _create_database()

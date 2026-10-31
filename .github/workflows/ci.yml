@@ -24,6 +24,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg://sunpower:ci_password@localhost:5432/sunpower_test
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET: ci_only_secret_not_for_production
+      STORAGE_DIR: ${{ runner.temp }}/storage
     defaults:
       run:
         working-directory: backend

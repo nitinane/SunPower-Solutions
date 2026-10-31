@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
@@ -10,9 +11,7 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "application/p
 
 
 def _root() -> Path:
-    root = Path(settings.storage_dir).resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return Path(settings.storage_dir).resolve()
 
 
 async def save_file(upload: UploadFile) -> str:
@@ -23,7 +22,9 @@ async def save_file(upload: UploadFile) -> str:
     if len(content) > limit:
         raise ValueError("File exceeds configured size limit")
     key = f"{uuid4().hex}{Path(upload.filename or '').suffix.lower()}"
-    (_root() / key).write_bytes(content)
+    path = _root() / key
+    os.makedirs(path.parent, exist_ok=True)
+    path.write_bytes(content)
     return key
 
 
@@ -46,7 +47,7 @@ def save_bytes(content: bytes, ext: str) -> str:
     now = datetime.now(UTC)
     key = f"{now:%Y}/{now:%m}/{uuid4().hex}.{ext}"
     path = _path_for(key)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    os.makedirs(path.parent, exist_ok=True)
     path.write_bytes(content)
     return key
 
