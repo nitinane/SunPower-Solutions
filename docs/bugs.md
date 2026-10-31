@@ -181,7 +181,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a06-dispatch-warranty-list-names-the-product-not-only-unit-ids.png
 - Likely layer: frontend (+ contract: `WarrantyRead` has no product name/serial), `frontend/src/pages/warehouse/Dispatches.tsx`.
 - PDF requirement: R9
-- Status: open
+- Status: fixed in `fix(BUG-012): label delivery warranties with product and serial`
 
 ### BUG-013 [minor] My day logs a 404 on every load when there is no pay run
 - Role / screen / URL: tech1 / My day / `/technician/today`

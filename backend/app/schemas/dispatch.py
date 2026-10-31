@@ -58,6 +58,8 @@ class DispatchRead(BaseModel):
 
 
 class WarrantyRead(BaseModel):
+    product_name: str
+    serial: str | None
     model_config = ConfigDict(from_attributes=True)
     id: int
     order_id: int

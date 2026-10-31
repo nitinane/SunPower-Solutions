@@ -427,6 +427,8 @@ export type UserBrief = {
 };
 export type UserRole = "admin" | "director" | "support" | "warehouse" | "technician" | "office" | "manager" | "surveyor";
 export type WarrantyRead = {
+    "product_name": string;
+    "serial": string | null;
     "id": number;
     "order_id": number;
     "order_item_id": number;

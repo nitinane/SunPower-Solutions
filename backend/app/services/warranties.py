@@ -10,6 +10,7 @@ from app.models.dispatch import Dispatch
 from app.models.warranties import Warranty
 from app.repositories import dispatch as dispatch_repo
 from app.repositories import warranties as warranty_repo
+from app.schemas.dispatch import WarrantyRead
 
 
 def create_for_delivery(db: Session, dispatch: Dispatch, start_date: date) -> list[Warranty]:
@@ -38,3 +39,27 @@ def create_for_delivery(db: Session, dispatch: Dispatch, start_date: date) -> li
                 )
             )
     return warranties
+
+
+def delivery_reads(
+    db: Session, dispatch: Dispatch, warranties: list[Warranty]
+) -> list[WarrantyRead]:
+    products = {item.id: product for item, product in dispatch_repo.lines(db, dispatch.order_id)}
+    serials = {
+        unit.id: unit.serial_number for _, unit in dispatch_repo.scanned_items(db, dispatch.id)
+    }
+    return [
+        WarrantyRead(
+            id=row.id,
+            order_id=row.order_id,
+            order_item_id=row.order_item_id,
+            product_id=row.product_id,
+            product_name=products[row.order_item_id].name,
+            serialized_unit_id=row.serialized_unit_id,
+            serial=serials.get(row.serialized_unit_id),
+            quantity=row.quantity,
+            start_date=row.start_date,
+            end_date=row.end_date,
+        )
+        for row in warranties
+    ]

@@ -251,6 +251,10 @@ def test_delivery_creates_serial_and_bulk_warranties_in_ist(db, warehouse, pick)
     products = {p.id: p for p in db.scalars(select(Product))}
     by_sku = {products[row["product_id"]].sku: row for row in body["warranties"]}
     assert by_sku["INV-1K"]["end_date"] == "2029-01-31"
+    assert by_sku["INV-1K"]["product_name"] == products[by_sku["INV-1K"]["product_id"]].name
+    assert by_sku["INV-1K"]["serial"] == pick["serials"]["INV-1K"].serial_number
+    assert by_sku["PNL-540"]["product_name"] == products[by_sku["PNL-540"]["product_id"]].name
+    assert by_sku["PNL-540"]["serial"] is None
     assert by_sku["INV-1K"]["serialized_unit_id"] == pick["serials"]["INV-1K"].id
     assert by_sku["PNL-540"]["end_date"] == "2047-01-31"
     assert by_sku["PNL-540"]["serialized_unit_id"] is None

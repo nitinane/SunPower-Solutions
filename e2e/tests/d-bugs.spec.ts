@@ -97,3 +97,19 @@ test('BUG-011 order links display readable workflow details', async ({ page }) =
   await expect(detail).toContainText(/Installation job #/)
   await expect(detail).not.toContainText('{"id":')
 })
+
+test('BUG-012 delivery warranties show product and serial', async ({ page }) => {
+  await uiLogin(page, 'warehouse')
+  const list = await (await page.request.get('/api/v1/dispatches')).json()
+  const dispatch = list.items[0]
+  await page.route(`**/api/v1/dispatches/${dispatch.id}`, route => route.fulfill({ json: { ...dispatch, status: 'dispatched' } }))
+  await page.route(`**/api/v1/dispatches/${dispatch.id}/deliver`, route => route.fulfill({ json: { ...dispatch, status: 'delivered', warranties_created: 2, warranties: [
+    { id: 1, product_name: 'Solar inverter 3 kW', serial: 'DSD-INV3K-1001', start_date: '2026-11-01', end_date: '2028-11-01' },
+    { id: 2, product_name: 'Solar panel', serial: null, start_date: '2026-11-01', end_date: '2046-11-01' }
+  ] } }))
+  await page.goto(`/warehouse/dispatches/${dispatch.id}`)
+  await page.getByLabel('Receiver name').fill('Test Customer')
+  await page.getByRole('button', { name: 'Confirm delivery' }).click()
+  await expect(page.locator('[data-field]')).toContainText('Solar inverter 3 kW - DSD-INV3K-1001')
+  await expect(page.locator('[data-field]')).toContainText('Solar panel (bulk)')
+})

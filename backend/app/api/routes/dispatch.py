@@ -14,9 +14,9 @@ from app.schemas.dispatch import (
     DeliveryRead,
     DispatchRead,
     ScanCreate,
-    WarrantyRead,
 )
 from app.services import dispatch as dispatch_service
+from app.services import warranties as warranty_service
 from app.services.common import RequestMeta
 
 router = APIRouter(prefix="/dispatches", tags=["dispatch"])
@@ -79,5 +79,5 @@ def deliver(
     return DeliveryRead(
         **dispatch_service.to_read(db, dispatch).model_dump(),
         warranties_created=len(warranties),
-        warranties=[WarrantyRead.model_validate(row) for row in warranties],
+        warranties=warranty_service.delivery_reads(db, dispatch, warranties),
     )
