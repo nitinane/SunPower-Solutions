@@ -69,3 +69,15 @@ test('BUG-007 new share URL survives clipboard denial', async ({ page }) => {
   await expect(page.getByText('Copy unavailable. Select and copy the URL above.')).toBeVisible()
   expect(errors).toEqual([])
 })
+
+test('BUG-008 public pages have no staff sidebar or session request', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', r => { if (r.url().includes('/auth/me')) requests.push(r.url()) })
+  await page.goto('/public')
+  await settle(page)
+  await expect(page.locator('aside[aria-label="Main navigation"]')).toHaveCount(0)
+  await page.goto('/share/invalid-token')
+  await settle(page)
+  await expect(page.locator('aside[aria-label="Main navigation"]')).toHaveCount(0)
+  expect(requests).toEqual([])
+})

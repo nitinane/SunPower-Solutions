@@ -141,7 +141,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a10-director-dashboard-share-link-opens-read-only-without-login.png
 - Likely layer: frontend, `frontend/src/layouts/PublicLayout.tsx` (renders `SharedSidebar`).
 - PDF requirement: R18, R1
-- Status: open
+- Status: fixed in `fix(BUG-008): remove staff layout from public pages`
 
 ### BUG-009 [minor] Sales inbox does not show the subsidy request
 - Role / screen / URL: office / Sales inbox / `/office/enquiries`
