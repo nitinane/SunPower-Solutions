@@ -81,7 +81,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a11-invoice-invoices-list-contains-the-order-invoice-printable-view-open.png
 - Likely layer: contract mismatch. `frontend/src/pages/office/OfficePage.tsx` InvoicesTab (`{invoice.data.buyer.address}`) and the `Invoice` type in `frontend/src/api/sales.ts` vs `GET /api/v1/invoices/{id}`.
 - PDF requirement: R15
-- Status: open
+- Status: fixed in `fix(BUG-002): render invoice address fields`
 
 ### BUG-003 [major] Customer search crashes the Customers page; Repairs search shows a blank customer
 - Role / screen / URL: office and support / Customers / `/customers`. Also office / Repairs / `/office/repairs`.
