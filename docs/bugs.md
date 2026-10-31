@@ -161,7 +161,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a03-survey-submit-survey-form-has-a-recommended-kw-field.png
 - Likely layer: backend + frontend (schema `backend/app/schemas/surveys.py`, `frontend/src/pages/technician/FieldPages.tsx`). The PDF R3 lists only direction, tilt and cable distance, so this is a demo-script gap.
 - PDF requirement: R3
-- Status: open
+- Status: won't fix: PDF R3 lists only direction, tilt and cable distance
 
 ### BUG-011 [minor] Order screen shows pick list and job as raw JSON; accept alert shows an internal id
 - Role / screen / URL: office / Orders & payments / `/office/orders`, and Quotes / `/office/quotes`

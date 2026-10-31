@@ -117,8 +117,10 @@ test('A03 tech1 submits survey', async ({ browser }, info) => {
     await page.getByRole('link', { name: new RegExp(`${CUSTOMER} · scheduled`) }).first().click()
     await expect(page).toHaveURL(new RegExp(`/technician/surveys/${s.surveyId}$`))
   })
-  await run.check('survey form has a recommended kW field', page, async () => {
-    await expect(page.getByLabel(/recommended/i)).toBeVisible({ timeout: 2000 })
+  await run.check('survey form has the R3 direction, tilt and cable distance fields', page, async () => {
+    await expect(page.getByLabel('Roof direction')).toBeVisible()
+    await expect(page.getByLabel('Roof tilt (degrees)')).toBeVisible()
+    await expect(page.getByLabel('Cable distance (m)')).toBeVisible()
   })
   const ok = await run.check('submit survey: south, 15°, 20 m', page, async () => {
     if (!page.url().includes('/technician/surveys/')) { await page.goto(`/technician/surveys/${s.surveyId}`); await settle(page) }
