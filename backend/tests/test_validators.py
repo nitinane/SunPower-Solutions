@@ -22,7 +22,6 @@ from app.core.validators import (
     validate_pincode,
 )
 
-
 # ---------------------------------------------------------------- Phone
 
 @pytest.mark.parametrize(

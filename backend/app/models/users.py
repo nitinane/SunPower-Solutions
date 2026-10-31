@@ -5,8 +5,8 @@ from decimal import Decimal
 from sqlalchemy import Boolean, CheckConstraint, Index, Numeric, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import UserRole, sql_in
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class User(IdMixin, TimestampMixin, Base):

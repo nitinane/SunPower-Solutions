@@ -54,7 +54,8 @@ async def handle_validation_error(request: Request, exc: RequestValidationError)
     """Pydantic input errors -> 422 with one message per field."""
     fields: dict[str, str] = {}
     for err in exc.errors():
-        fields.setdefault(_field_name(err.get("loc", ())), _clean_message(err.get("msg", "Invalid value")))
+        field = _field_name(err.get("loc", ()))
+        fields.setdefault(field, _clean_message(err.get("msg", "Invalid value")))
     return JSONResponse(
         status_code=422,
         content=error_body("validation_error", "Some fields are invalid", fields),

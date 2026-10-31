@@ -1,4 +1,3 @@
-"""Customers repositorie stub. TODO: implement with the owning team."""
 """Customer and site queries. No commits and no business rules here."""
 
 from typing import Any

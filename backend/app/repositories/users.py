@@ -1,4 +1,3 @@
-"""Users repositorie stub. TODO: implement with the owning team."""
 """User (employee) queries. No commits and no business rules here."""
 
 from collections.abc import Iterable

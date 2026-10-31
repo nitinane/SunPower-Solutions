@@ -16,8 +16,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import DispatchStatus, sql_in
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class Dispatch(IdMixin, TimestampMixin, Base):

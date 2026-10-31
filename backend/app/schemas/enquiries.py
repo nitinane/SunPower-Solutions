@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.enums import CustomerType, EnquirySource, EnquiryStatus, SystemType
 from app.core.validators import (
-    Pincode,
     PersonName,
+    Pincode,
     normalize_email,
     normalize_phone,
 )

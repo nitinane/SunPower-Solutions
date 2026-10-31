@@ -16,8 +16,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import SerialUnitStatus, StockMovementReason, sql_in
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class Inventory(IdMixin, TimestampMixin, Base):

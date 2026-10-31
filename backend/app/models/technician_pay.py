@@ -6,8 +6,8 @@ from decimal import Decimal
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import PayoutStatus, sql_in
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class TechnicianPayment(IdMixin, TimestampMixin, Base):

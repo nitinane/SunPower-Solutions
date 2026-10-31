@@ -17,7 +17,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import (
     RoofDirection,
     SurveyReviewRequiredStatus,
@@ -25,6 +24,7 @@ from app.core.enums import (
     sql_in,
     sql_not_in,
 )
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class SiteSurvey(IdMixin, TimestampMixin, Base):

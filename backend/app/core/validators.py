@@ -5,7 +5,7 @@ Every rule mirrors a DB CHECK constraint, so bad input gets a friendly 422 messa
 from the API instead of a raw database error.
 
 Usage in schemas:
-    phone: PhoneInput              # validated, kept as typed (service stores phone_raw + phone_e164)
+    phone: PhoneInput              # validated, kept as typed (stored as phone_raw)
     phone: PhoneE164               # validated AND converted to +919876543210
     pincode: Pincode
     email: OptionalEmail = None

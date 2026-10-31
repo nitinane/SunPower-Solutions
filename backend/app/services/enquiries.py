@@ -1,4 +1,3 @@
-"""Enquiries service stub. TODO: implement with the owning team."""
 """
 Feature 1: Enquiry inbox + qualification call.
 

@@ -1,4 +1,3 @@
-"""Auth repositorie stub. TODO: implement with the owning team."""
 """Audit log writes and reads. The audit log is append-only: no update or delete functions."""
 
 from typing import Any

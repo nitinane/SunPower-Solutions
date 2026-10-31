@@ -2,7 +2,7 @@
 Single source of truth for every fixed value in SunPower (roles, statuses, types).
 
 Used by
-- DB models : CHECK constraints -> CheckConstraint(sql_in("status", EnquiryStatus), name="ck_enquiries_status")
+- DB models : CHECK constraints -> CheckConstraint(sql_in("status", EnquiryStatus), ...)
 - Schemas   : request/response validation (shown as dropdowns in /docs)
 - Frontend  : same strings, served later by GET /api/v1/meta/enums
 

@@ -6,8 +6,8 @@ from decimal import Decimal
 from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import InvoiceStatus, sql_in
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class Invoice(IdMixin, TimestampMixin, Base):

@@ -6,8 +6,8 @@ from decimal import Decimal
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, IdMixin, TimestampMixin
 from app.core.enums import PaymentMethod, PaymentStatus, PaymentType, sql_in
+from app.db.base import Base, IdMixin, TimestampMixin
 
 
 class Payment(IdMixin, TimestampMixin, Base):

@@ -1,4 +1,3 @@
-"""Enquiries repositorie stub. TODO: implement with the owning team."""
 """
 Enquiry queries. No commits and no business rules here (those live in services/enquiries.py).
 
