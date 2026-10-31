@@ -14,9 +14,10 @@ Solar installation ERP for "SunPower Solutions". Hackathon: finish fast, no extr
 - After each step: run ruff and that step's tests. Fix before moving on.
 
 ## Ownership
-- NEVER edit app/models/* or alembic/versions/* — the DB teammate owns them.
-- If a table/column/constraint/index you need is missing: append it to db-requests.md
-  (table, column, type, constraint, why), print the list, and STOP.
+- We own the schema: app/models/* and alembic/versions/* may be edited.
+- If a table/column/constraint/index you need is missing: edit the model, add a new Alembic
+  migration (never edit an applied one), run upgrade -> downgrade -1 -> upgrade and
+  `alembic check`, then log it under "Done" in db-requests.md and continue.
 
 ## Layers (same as Features 1–3)
 Router -> Service -> Repository -> DB. Schemas = Pydantic, models = SQLAlchemy.

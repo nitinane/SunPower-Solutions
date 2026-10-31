@@ -298,6 +298,7 @@ def deliver(db: Session, dispatch_id: int, data: DeliveryCreate, *, actor: User,
         status=DispatchStatus.DELIVERED,
         receiver_name=data.receiver_name,
         delivered_at=delivered_at,
+        delivered_by=actor.id,
     )
     warranties = warranty_service.create_for_delivery(
         db, dispatch, delivered_at.astimezone(BUSINESS_TZ).date()

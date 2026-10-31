@@ -3,7 +3,7 @@
 ## Open
 
 
-2. *(nice to have, not in Phase 1 spec)* `dispatches.delivered_by` — audit log covers it for now.
+_(none)_
 
 ## Mappings (confirmed, no change needed)
 
@@ -17,6 +17,8 @@
 | stock_movements quantity / created_by | `quantity_delta` (signed) / `performed_by` |
 
 ## Done
+
+- `dispatches.delivered_by BIGINT NULL` FK users(id) ON DELETE SET NULL, migration `b7c3e1f04d21`; set by `POST /dispatches/{id}/deliver`. Upgrade, downgrade, upgrade + `alembic check` clean.
 
 - P1-1 orders implementation: first payment creates the dispatch pick list and unscheduled installation job in the payment transaction. Previous non-schema implementation note resolved.
 

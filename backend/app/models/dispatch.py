@@ -42,6 +42,7 @@ class Dispatch(IdMixin, TimestampMixin, Base):
     dispatched_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     receiver_name: Mapped[str | None] = mapped_column(String(150))
 
 

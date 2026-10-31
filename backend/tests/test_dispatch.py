@@ -13,6 +13,7 @@ from app.models.catalog import Product
 from app.models.dispatch import Dispatch
 from app.models.inventory import Inventory, SerializedUnit, StockMovement
 from app.models.orders import Order
+from app.models.users import User
 from app.models.warranties import Warranty
 from app.repositories import warranties as warranty_repo
 from scripts.seed import seed_stock
@@ -262,6 +263,8 @@ def test_delivery_creates_serial_and_bulk_warranties_in_ist(db, warehouse, pick)
     _error(again, 409, "ALREADY_DELIVERED")
     db.expire_all()
     assert db.get(Order, pick["order_id"]).status == "delivered"
+    delivered_by = db.get(Dispatch, pick["id"]).delivered_by
+    assert db.get(User, delivered_by).role == UserRole.WAREHOUSE
     assert (
         db.scalar(
             select(func.count())
