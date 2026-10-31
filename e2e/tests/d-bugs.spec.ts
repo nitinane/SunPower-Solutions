@@ -50,3 +50,11 @@ test('BUG-005 field pages have navigation and sign out', async ({ page }) => {
   await expect(page).toHaveURL(/\/login$/)
   expect((await page.request.get('/api/v1/auth/me')).status()).toBe(401)
 })
+
+test('BUG-006 installations default schedule range is valid', async ({ page }) => {
+  await uiLogin(page, 'office')
+  const response = page.waitForResponse(r => r.url().includes('/api/v1/schedule?'))
+  await page.goto('/installations')
+  expect((await response).status()).toBe(200)
+  await expect(page.locator('body')).not.toContainText('Pick at most 62 days')
+})

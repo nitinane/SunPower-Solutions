@@ -42,7 +42,7 @@ function CustomersModule() {
 }
 function istDate(offsetDays = 0) { const d = new Date(Date.now() + offsetDays * 86_400_000); return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d) }
 function InstallationsModule() {
-  const [status, setStatus] = useState(''); const [from, setFrom] = useState(istDate(-30)); const [to, setTo] = useState(istDate(60)); const [selected, setSelected] = useState<number | null>(null)
+  const [status, setStatus] = useState(''); const [from, setFrom] = useState(istDate(-30)); const [to, setTo] = useState(istDate(30)); const [selected, setSelected] = useState<number | null>(null)
   const query = useQuery({ queryKey: ['schedule', from, to], queryFn: () => getSchedule({ from, to, page: 1, page_size: 100 }) })
   const detail = useQuery({ queryKey: ['installation-job', selected], queryFn: () => getInstallation(selected!), enabled: selected !== null })
   const jobs = (query.data?.items ?? []).filter(job => !status || job.status === status)

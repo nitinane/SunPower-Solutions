@@ -121,7 +121,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (no exception; see log `e2e/artifacts/log-b-office-smoke.json`)
 - Likely layer: frontend, `frontend/src/pages/operations/OperationsPage.tsx` InstallationsModule `istDate(-30)` / `istDate(60)`.
 - PDF requirement: R7
-- Status: open
+- Status: fixed in `fix(BUG-006): use a valid default schedule range`
 
 ### BUG-007 [major] New share link is never shown, only copied to the clipboard
 - Role / screen / URL: director / Shared links / `/director/sharing`
