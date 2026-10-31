@@ -15,6 +15,17 @@ export function SharedSidebar() {
   const realWorkspaces: NavItem[] = []
   if (canSee(role, ['office'])) realWorkspaces.push({ icon: 'support_agent', label: 'Office Sales', path: '/office/enquiries' })
   if (canSee(role, ['director'])) realWorkspaces.push({ icon: 'query_stats', label: 'Director', path: '/director/overview' })
+  if (canSee(role, ['technician'])) {
+    realWorkspaces.push({ icon: 'today', label: 'My Day', path: '/technician/today' })
+  }
+  if (canSee(role, ['warehouse'])) {
+    realWorkspaces.push({ icon: 'move_to_inbox', label: 'Receiving', path: '/warehouse/receiving' })
+    realWorkspaces.push({ icon: 'local_shipping', label: 'Dispatches', path: '/warehouse/dispatches' })
+  }
+  if (canSee(role, ['manager'])) {
+    realWorkspaces.push({ icon: 'calendar_month', label: 'Crew Schedule', path: '/manager/schedule' })
+    realWorkspaces.push({ icon: 'fact_check', label: 'Survey Review', path: '/manager/surveys' })
+  }
   if (canSee(role, ['support'])) realWorkspaces.push({ icon: 'support', label: 'Support', path: '/support' })
   const operations: NavItem[] = []
   if (canSee(role, ['office', 'support'])) operations.push({ icon: 'groups', label: 'Customers', path: '/customers' })

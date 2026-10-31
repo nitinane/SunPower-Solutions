@@ -12,6 +12,7 @@ import { OfficePage } from './pages/office/OfficePage'
 import { SupportPage } from './pages/support/SupportPage'
 import { DirectorPage } from './pages/director/DirectorPage'
 import { LoginPage, OperationsPage } from './pages/operations/OperationsPage'
+import { fieldRoutes } from './routes.field'
 
 function SessionGate({ roles, children }: { roles: string[]; children: ReactNode }) {
   const location = useLocation()
@@ -43,5 +44,6 @@ export const router = createBrowserRouter([
     { path: '/reports', element: <SessionGate roles={['director']}><OperationsPage module="reports" /></SessionGate> },
     { path: '/settings', element: <SessionGate roles={['director', 'manager', 'office', 'support', 'warehouse']}><OperationsPage module="settings" /></SessionGate> },
   ] },
+  ...fieldRoutes,
   { path: '*', element: <Navigate to="/" replace /> },
 ])
