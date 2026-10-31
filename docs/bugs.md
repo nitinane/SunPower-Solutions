@@ -91,7 +91,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a02-office-inbox-customer-created-customers-search.png, e2e/artifacts/probe-office-repairs-search.png
 - Likely layer: contract mismatch. `frontend/src/pages/operations/OperationsPage.tsx` (CustomersModule), `frontend/src/pages/office/OfficePage.tsx` (RepairsTab), `searchSupport` / `getCustomerMatches` types. The `/support` screen (field contracts) uses `name` and works.
 - PDF requirement: R11
-- Status: open
+- Status: fixed in `fix(BUG-003): match support search customer fields`
 
 ### BUG-004 [major] Login sends manager, technician and warehouse users to the mock Owner dashboard
 - Role / screen / URL: manager, tech1, warehouse / Login / `/login`

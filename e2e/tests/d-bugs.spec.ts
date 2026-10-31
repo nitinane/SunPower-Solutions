@@ -24,3 +24,14 @@ test('BUG-002 invoice opens with a printable address', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Print / Save PDF' })).toBeVisible()
   await expect(page.locator('.print-sheet')).toContainText('Hyderabad')
 })
+
+test('BUG-003 customer and repairs search show names and phones', async ({ page }) => {
+  await openAs(page, 'office', '/customers')
+  await page.getByLabel('Search customers').fill('9123456780')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Test Customer' })).toBeVisible()
+  await page.goto('/office/repairs')
+  await page.getByLabel('Customer phone / name').fill('9123456780')
+  await page.getByRole('button', { name: 'Search customer' }).click()
+  await expect(page.locator('.record-card strong').filter({ hasText: 'Test Customer' })).toContainText('9123456780')
+})
