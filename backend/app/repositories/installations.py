@@ -211,3 +211,10 @@ def add_evidence(db: Session, data: dict[str, Any]) -> InstallationEvidence:
 
 def get_evidence(db: Session, evidence_id: int) -> InstallationEvidence | None:
     return db.get(InstallationEvidence, evidence_id)
+
+
+def jobs_page(db: Session, status: InstallationJobStatus, *, limit: int, offset: int):
+    stmt = _job_rows().where(InstallationJob.status == status)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    rows = db.execute(stmt.order_by(InstallationJob.id).limit(limit).offset(offset)).all()
+    return [tuple(row) for row in rows], total

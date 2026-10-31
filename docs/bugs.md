@@ -71,7 +71,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a07-crew-calendar-assign-tech1-tech2-to-the-new-job-today.png
 - Likely layer: frontend, `frontend/src/pages/manager/ManagerPages.tsx` (`/orders?status=confirmed`). Should list jobs in `planned`/`scheduled`, or orders in confirmed/dispatched/delivered.
 - PDF requirement: R7
-- Status: open
+- Status: fixed in `fix(BUG-001): list all planned installation jobs`
 
 ### BUG-002 [blocker] Opening an invoice crashes the Office page
 - Role / screen / URL: office / Invoices / `/office/invoices`

@@ -302,7 +302,7 @@ test('A07 manager books crew; double booking blocked', async ({ browser }, info)
   const { page, landing } = await run.newRole(browser, 'manager')
   await checkLanding(run, 'manager', landing, page)
   const today = istDate(0)
-  const orderSelect = page.getByLabel('Confirmed order')
+  const orderSelect = page.getByLabel('Planned installation job')
   const book = async (orderNumber: string, techs: string[]) => {
     await selectByText(page, orderSelect, orderNumber); await settle(page)
     await page.getByLabel('Installation date').fill(today)

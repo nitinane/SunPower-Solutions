@@ -411,3 +411,8 @@ def audit(
         ip_address=meta.ip_address,
     )
 
+
+
+def list_jobs(db: Session, status: InstallationJobStatus, *, page: int, page_size: int):
+    rows, total = job_repo.jobs_page(db, status, limit=page_size, offset=(page - 1) * page_size)
+    return schedule_rows(db, rows), total

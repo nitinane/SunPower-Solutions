@@ -248,3 +248,22 @@ def test_me_today_shows_only_my_items(db, api, office, manager):
     assert schedule.status_code == 200, schedule.text
     row = next(r for r in schedule.json()["items"] if r["job_id"] == job_id)
     assert [m["name"] for m in row["crew"]] == [mine.full_name]
+
+
+@pytest.mark.parametrize("order_status", ["confirmed", "dispatched", "delivered"])
+def test_planned_jobs_ignore_order_status(db, api, office, manager, order_status):
+    from app.core.enums import InstallationJobStatus, OrderStatus
+
+    job_id = _new_job(db, api, office)
+    job = db.get(InstallationJob, job_id)
+    db.get(Order, job.order_id).status = OrderStatus(order_status)
+    db.commit()
+    response = manager.get("/api/v1/installation-jobs?status=planned")
+    assert response.status_code == 200
+    assert job_id in [row["job_id"] for row in response.json()["items"]]
+    assert api(office).get("/api/v1/installation-jobs?status=planned").status_code == 403
+    job.status = InstallationJobStatus.SCHEDULED
+    db.commit()
+    assert job_id not in [row["job_id"] for row in manager.get(
+        "/api/v1/installation-jobs?status=planned"
+    ).json()["items"]]

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Path, Query, Response, UploadFile,
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, get_request_meta, require_role
-from app.core.enums import UserRole
+from app.core.enums import InstallationJobStatus, UserRole
 from app.models.users import User
 from app.schemas.common import Page
 from app.schemas.installations import (
@@ -131,3 +131,15 @@ def evidence_file(
         media_type=content_type,
         headers={"Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff"},
     )
+
+
+@router.get("/installation-jobs", response_model=Page[ScheduleRow])
+def list_jobs(
+    db: DbSession,
+    actor: Planner,
+    status: InstallationJobStatus = InstallationJobStatus.PLANNED,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> Page[ScheduleRow]:
+    items, total = job_service.list_jobs(db, status, page=page, page_size=page_size)
+    return Page[ScheduleRow](items=items, total=total, page=page, page_size=page_size)
