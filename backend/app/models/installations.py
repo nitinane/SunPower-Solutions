@@ -20,13 +20,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import EvidenceContentType, EvidenceType, InstallationStatus, sql_in
+from app.core.enums import EvidenceContentType, EvidenceType, InstallationJobStatus, sql_in
 
 
 class InstallationJob(IdMixin, TimestampMixin, Base):
     __tablename__ = "installation_jobs"
     __table_args__ = (
-        CheckConstraint(sql_in("status", InstallationStatus), name="status_allowed"),
+        CheckConstraint(sql_in("status", InstallationJobStatus), name="status_allowed"),
         ForeignKeyConstraint(
             ["order_id", "site_id"],
             ["orders.id", "orders.site_id"],

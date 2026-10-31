@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import TicketChargeType, TicketPriority, TicketStatus, sql_in
+from app.core.enums import ChargeType, NonProductChargeType, TicketPriority, TicketStatus, sql_in
 
 
 class SupportTicket(IdMixin, TimestampMixin, Base):
@@ -78,13 +78,13 @@ class SupportTicket(IdMixin, TimestampMixin, Base):
 class TicketCharge(IdMixin, TimestampMixin, Base):
     __tablename__ = "ticket_charges"
     __table_args__ = (
-        CheckConstraint(sql_in("charge_type", TicketChargeType), name="charge_type_allowed"),
+        CheckConstraint(sql_in("charge_type", ChargeType), name="charge_type_allowed"),
         CheckConstraint("cost_amount >= 0 AND customer_price >= 0", name="amounts_nonnegative"),
         CheckConstraint("quantity > 0", name="quantity_positive"),
         CheckConstraint(
-            f"(charge_type = '{TicketChargeType.PART.value}' AND product_id IS NOT NULL) OR "
-            f"(charge_type = '{TicketChargeType.LABOUR.value}' AND product_id IS NULL "
-            f"AND replacement_unit_id IS NULL)",
+            f"(charge_type = '{ChargeType.PART.value}' AND product_id IS NOT NULL) OR "
+            f"({sql_in('charge_type', NonProductChargeType)} "
+            "AND product_id IS NULL AND replacement_unit_id IS NULL)",
             name="charge_type_product_consistency",
         ),
         CheckConstraint(

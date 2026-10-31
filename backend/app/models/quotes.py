@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import QuoteStatus, sql_in
+from app.core.enums import QuoteStatus, sql_in
 
 
 class Quote(IdMixin, TimestampMixin, Base):

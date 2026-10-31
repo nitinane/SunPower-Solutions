@@ -7,14 +7,14 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, St
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import TechnicianPaymentStatus, sql_in
+from app.core.enums import PayoutStatus, sql_in
 
 
 class TechnicianPayment(IdMixin, TimestampMixin, Base):
     __tablename__ = "technician_payments"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
-        CheckConstraint(sql_in("status", TechnicianPaymentStatus), name="status_allowed"),
+        CheckConstraint(sql_in("status", PayoutStatus), name="status_allowed"),
         Index(
             "uq_technician_payments_idempotency_key",
             "idempotency_key",

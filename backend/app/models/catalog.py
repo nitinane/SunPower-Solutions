@@ -16,7 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import PackageType, ProductCategory, sql_in
+from app.core.enums import PackageType, ProductCategory, sql_in
 
 
 class Product(IdMixin, TimestampMixin, Base):

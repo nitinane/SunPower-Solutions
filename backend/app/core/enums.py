@@ -12,7 +12,6 @@ Adding a value later = edit this file + one small migration.
 
 from enum import StrEnum
 
-
 # ---------------------------------------------------------------- People
 
 class UserRole(StrEnum):
@@ -23,6 +22,8 @@ class UserRole(StrEnum):
     SUPPORT = "support"          # service tickets
     WAREHOUSE = "warehouse"      # stock receiving, pick lists, dispatch scanning
     TECHNICIAN = "technician"    # surveys, installations, repairs
+    OFFICE = "office"
+    SURVEYOR = "surveyor"
 
 
 # ---------------------------------------------------------------- Enquiries & customers
@@ -32,6 +33,10 @@ class EnquirySource(StrEnum):
     PHONE_CALL = "phone_call"
     WHATSAPP = "whatsapp"        # logged by staff, no WhatsApp API
     WALK_IN = "walk_in"
+    WEBSITE = "website"
+    PHONE = "phone"
+    REFERRAL = "referral"
+    OTHER = "other"
 
 
 class EnquiryStatus(StrEnum):
@@ -40,11 +45,14 @@ class EnquiryStatus(StrEnum):
     QUALIFIED = "qualified"      # call checks passed -> ready for site survey
     LOST = "lost"                # closed with a reason, never deleted
     CONVERTED = "converted"      # became an order
+    UNQUALIFIED = "unqualified"
+    CLOSED = "closed"
 
 
 class CustomerType(StrEnum):
     HOME = "home"
     FACTORY = "factory"          # PDF: "homes and small factories"
+    RESIDENTIAL = "residential"
 
 
 class SystemType(StrEnum):
@@ -95,6 +103,10 @@ class ProductCategory(StrEnum):
     EARTHING = "earthing"            # safety parts
     STAND = "stand"
     SERVICE = "service"              # labour, never stocked
+    STRUCTURE = "structure"
+    CABLE = "cable"
+    ACCESSORY = "accessory"
+    OTHER = "other"
 
 
 # ---------------------------------------------------------------- Quotes, orders, money
@@ -105,6 +117,7 @@ class QuoteStatus(StrEnum):
     ACCEPTED = "accepted"
     REJECTED = "rejected"
     EXPIRED = "expired"
+    CANCELLED = "cancelled"
 
 
 class OrderStatus(StrEnum):
@@ -115,6 +128,8 @@ class OrderStatus(StrEnum):
     INSTALLED = "installed"
     COMPLETED = "completed"                # installed + fully paid
     CANCELLED = "cancelled"
+    PENDING_PAYMENT = "pending_payment"
+    PROCESSING = "processing"
 
 
 class PaymentType(StrEnum):
@@ -131,12 +146,15 @@ class PaymentMethod(StrEnum):
     BANK_TRANSFER = "bank_transfer"
     CARD = "card"
     CHEQUE = "cheque"
+    OTHER = "other"
 
 
 class PaymentStatus(StrEnum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     FAILED = "failed"
+    COMPLETED = "completed"
+    REFUNDED = "refunded"
 
 
 class InvoiceKind(StrEnum):
@@ -149,6 +167,8 @@ class InvoiceStatus(StrEnum):
     PARTIALLY_PAID = "partially_paid"
     PAID = "paid"
     CANCELLED = "cancelled"
+    DRAFT = "draft"
+    VOID = "void"
 
 
 # ---------------------------------------------------------------- Warehouse
@@ -160,6 +180,8 @@ class SerialUnitStatus(StrEnum):
     FAULTY = "faulty"
     RETURNED = "returned"
     SCRAPPED = "scrapped"
+    RESERVED = "reserved"
+    DAMAGED = "damaged"
 
 
 class DispatchStatus(StrEnum):
@@ -168,6 +190,7 @@ class DispatchStatus(StrEnum):
     DISPATCHED = "dispatched"
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
+    DRAFT = "draft"
 
 
 class StockMovementReason(StrEnum):
@@ -177,6 +200,8 @@ class StockMovementReason(StrEnum):
     DISPATCH = "dispatch"
     RETURN = "return"
     ADJUSTMENT = "adjustment"
+    PURCHASE = "purchase"
+    DAMAGE = "damage"
 
 
 # ---------------------------------------------------------------- Installation
@@ -186,6 +211,7 @@ class InstallationJobStatus(StrEnum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    PLANNED = "planned"
 
 
 class EvidenceType(StrEnum):
@@ -193,6 +219,15 @@ class EvidenceType(StrEnum):
     EQUIPMENT_PHOTO = "equipment_photo"
     SIGNATURE = "signature"
     OTHER = "other"
+    PHOTO = "photo"
+    DOCUMENT = "document"
+
+
+class EvidenceContentType(StrEnum):
+    JPEG = "image/jpeg"
+    PNG = "image/png"
+    WEBP = "image/webp"
+    PDF = "application/pdf"
 
 
 # ---------------------------------------------------------------- Warranty & service
@@ -224,10 +259,17 @@ class TicketStatus(StrEnum):
     AWAITING_CONFIRMATION = "awaiting_confirmation"  # fixed, waiting for customer
     CLOSED = "closed"                                # customer confirmed it works
     CANCELLED = "cancelled"
+    WAITING_CUSTOMER = "waiting_customer"
+    RESOLVED = "resolved"
 
 
 class ChargeType(StrEnum):
     PART = "part"
+    LABOUR = "labour"
+    VISIT = "visit"
+
+
+class NonProductChargeType(StrEnum):
     LABOUR = "labour"
     VISIT = "visit"
 
@@ -242,12 +284,22 @@ class SubsidyStatus(StrEnum):
     APPROVED = "approved"
     DISBURSED = "disbursed"
     REJECTED = "rejected"
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    UNDER_REVIEW = "under_review"
+    PAID = "paid"
 
 
 class PayoutStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     PAID = "paid"
+    CANCELLED = "cancelled"
+
+
+class SurveyReviewRequiredStatus(StrEnum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 # ---------------------------------------------------------------- Helpers
@@ -261,6 +313,12 @@ def sql_in(column: str, enum_cls: type[StrEnum]) -> str:
     """Build a CHECK expression like: status IN ('new', 'contacted')."""
     allowed = ", ".join(f"'{value}'" for value in enum_values(enum_cls))
     return f"{column} IN ({allowed})"
+
+
+def sql_not_in(column: str, enum_cls: type[StrEnum]) -> str:
+    """Build a NOT IN CHECK expression from the same enum source as sql_in."""
+    allowed = ", ".join(f"'{value}'" for value in enum_values(enum_cls))
+    return f"{column} NOT IN ({allowed})"
 
 
 ALL_ENUMS: dict[str, type[StrEnum]] = {
@@ -290,6 +348,15 @@ ALL_ENUMS: dict[str, type[StrEnum]] = {
     "ticket_priority": TicketPriority,
     "ticket_status": TicketStatus,
     "charge_type": ChargeType,
+    "non_product_charge_type": NonProductChargeType,
     "subsidy_status": SubsidyStatus,
     "payout_status": PayoutStatus,
+    "evidence_content_type": EvidenceContentType,
+    "survey_review_required_status": SurveyReviewRequiredStatus,
 }
+
+if not set(NonProductChargeType).issubset(set(ChargeType)):
+    raise RuntimeError("Non-product charge types must be valid charge types")
+
+if not set(SurveyReviewRequiredStatus).issubset(set(SurveyStatus)):
+    raise RuntimeError("Review-required survey statuses must be valid survey statuses")

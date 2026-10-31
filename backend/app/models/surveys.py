@@ -18,13 +18,20 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import SurveyReviewRequiredStatus, SurveyStatus, sql_in, sql_not_in
+from app.core.enums import (
+    RoofDirection,
+    SurveyReviewRequiredStatus,
+    SurveyStatus,
+    sql_in,
+    sql_not_in,
+)
 
 
 class SiteSurvey(IdMixin, TimestampMixin, Base):
     __tablename__ = "site_surveys"
     __table_args__ = (
         CheckConstraint(sql_in("status", SurveyStatus), name="status_allowed"),
+        CheckConstraint(sql_in("roof_direction", RoofDirection), name="roof_direction_allowed"),
         CheckConstraint(
             "reviewed_by IS NULL OR reviewed_by <> surveyor_id", name="reviewer_not_surveyor"
         ),

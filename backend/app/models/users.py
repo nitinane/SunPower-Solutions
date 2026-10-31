@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, CheckConstraint, Index, Numeric, String, Text, t
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import UserRole, sql_in
+from app.core.enums import UserRole, sql_in
 
 
 class User(IdMixin, TimestampMixin, Base):

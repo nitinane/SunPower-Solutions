@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import EnquirySource, EnquiryStatus, sql_in
+from app.core.enums import CustomerType, EnquirySource, EnquiryStatus, SystemType, sql_in
 
 
 class Enquiry(IdMixin, TimestampMixin, Base):
@@ -28,6 +28,8 @@ class Enquiry(IdMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint(sql_in("status", EnquiryStatus), name="status_allowed"),
         CheckConstraint(sql_in("source", EnquirySource), name="source_allowed"),
+        CheckConstraint(sql_in("system_type", SystemType), name="system_type_allowed"),
+        CheckConstraint(sql_in("customer_type", CustomerType), name="customer_type_allowed"),
         CheckConstraint(
             "site_id IS NULL OR customer_id IS NOT NULL", name="site_requires_customer"
         ),
@@ -59,12 +61,13 @@ class Enquiry(IdMixin, TimestampMixin, Base):
     phone_e164: Mapped[str | None] = mapped_column(String(16))
     email: Mapped[str | None] = mapped_column(String(255))
     # Retain the submitted address/requirements before a qualified lead gets a Site row.
-    address_line: Mapped[str | None] = mapped_column(String(240))
-    city: Mapped[str | None] = mapped_column(String(100))
-    pincode: Mapped[str | None] = mapped_column(String(6))
-    requested_capacity_kw: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
-    system_type: Mapped[str | None] = mapped_column(String(30))
-    customer_type: Mapped[str | None] = mapped_column(String(30))
+    address_line: Mapped[str] = mapped_column(String(240), nullable=False)
+    city: Mapped[str] = mapped_column(String(100), nullable=False)
+    state: Mapped[str] = mapped_column(String(100), nullable=False)
+    pincode: Mapped[str] = mapped_column(String(6), nullable=False)
+    requested_capacity_kw: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
+    system_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    customer_type: Mapped[str] = mapped_column(String(30), nullable=False)
     subsidy_requested: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

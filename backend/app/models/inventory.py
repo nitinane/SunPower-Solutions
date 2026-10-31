@@ -17,7 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import InventoryMovementReason, SerializedUnitStatus, sql_in
+from app.core.enums import SerialUnitStatus, StockMovementReason, sql_in
 
 
 class Inventory(IdMixin, TimestampMixin, Base):
@@ -43,7 +43,7 @@ class StockMovement(IdMixin, Base):
     __tablename__ = "stock_movements"
     __table_args__ = (
         CheckConstraint("quantity_delta <> 0", name="quantity_delta_nonzero"),
-        CheckConstraint(sql_in("reason", InventoryMovementReason), name="reason_allowed"),
+        CheckConstraint(sql_in("reason", StockMovementReason), name="reason_allowed"),
         Index("ix_stock_movements_product_created", "product_id", "created_at"),
         Index(
             "uq_stock_movements_idempotency_key",
@@ -74,7 +74,7 @@ class SerializedUnit(IdMixin, TimestampMixin, Base):
             "serial_number = upper(btrim(serial_number)) AND length(serial_number) > 0",
             name="serial_normalized",
         ),
-        CheckConstraint(sql_in("status", SerializedUnitStatus), name="status_allowed"),
+        CheckConstraint(sql_in("status", SerialUnitStatus), name="status_allowed"),
         UniqueConstraint("product_id", "serial_number", name="uq_serialized_units_product_serial"),
         UniqueConstraint("id", "product_id", name="uq_serialized_units_id_product"),
         Index("ix_serialized_units_serial_number", "serial_number"),

@@ -17,7 +17,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import SubsidyStatus, sql_in
+from app.core.enums import SubsidyStatus, sql_in
 
 
 class SubsidyApplication(IdMixin, TimestampMixin, Base):

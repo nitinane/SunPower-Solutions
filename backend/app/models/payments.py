@@ -7,7 +7,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, St
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IdMixin, TimestampMixin
-from app.models.enums import PaymentMethod, PaymentStatus, PaymentType, sql_in
+from app.core.enums import PaymentMethod, PaymentStatus, PaymentType, sql_in
 
 
 class Payment(IdMixin, TimestampMixin, Base):

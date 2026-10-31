@@ -19,7 +19,7 @@ This schema is the first implementation of the agreed 30-table design. It uses P
 
 ## Integrity rules implemented
 
-- Domain values are centralized in `backend/app/models/enums.py`; string CHECK constraints are built with `sql_in("column", DomainEnum)` (and `sql_not_in` for reviewed survey states). Status columns stay SQL `String` columns. `EnquirySource` includes `whatsapp`, `OrderStatus` includes `installed` and `completed`, and package, product, and payment-type values match the problem statement.
+- Domain values are centralized in `backend/app/core/enums.py`; string CHECK constraints are built with `sql_in("column", DomainEnum)` (and `sql_not_in` for reviewed survey states). Status columns stay SQL `String` columns. `EnquirySource` includes `whatsapp`, `OrderStatus` includes `installed` and `completed`, and package, product, and payment-type values match the problem statement.
 - Enquiries retain the originally submitted address and system requirements. These fields remain on the enquiry even when a `Site` is created after qualification.
 - Technician assignment rows store required `hours_worked` and an `hourly_rate` snapshot copied from the user rate at assignment time. Subsequent edits to `users.hourly_rate` do not change the snapshot.
 - Installation completion, support confirmation, ticket part quantity, and subsidy JSONB document checklist fields are stored on their owning records.
