@@ -5,6 +5,7 @@ FastAPI + PostgreSQL 16 + SQLAlchemy 2 (sync) + Alembic + Redis, Docker Compose,
 Solar installation ERP for "SunPower Solutions". Hackathon: finish fast, no extras.
 
 ## How to work
+- Build plan: BUILD_PLAN.md. "Next task" = first unchecked box in its PROGRESS list.
 - The task prompt is the full spec. Execute it step by step. Don't redesign. Don't ask questions.
 - If something is unclear, pick the simplest option that satisfies the rule, add one line to
   docs/decisions.md ("<feature>: <choice> because <reason>"), and continue.
