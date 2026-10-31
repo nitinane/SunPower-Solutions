@@ -2,6 +2,7 @@
 
 ## Open
 
+
 1. **Part 1 (orders) code is not built.** `app/services/orders.py`, `app/repositories/orders.py`
    and `app/api/routes/orders.py` are stubs. Nothing creates the pick list (dispatch row in
    its first status) after the first payment. Not a schema item; schema support is in place.
@@ -19,6 +20,8 @@
 | stock_movements quantity / created_by | `quantity_delta` (signed) / `performed_by` |
 
 ## Done
+
+- P1-1 MANAGER role: added `UserRole.MANAGER` and extended the `users.role` allowed-value CHECK in migration `a19b2d05eaa9`. Existing VARCHAR(30) column unchanged; no data removed. Upgrade, downgrade, upgrade verified; 69 tests pass.
 
 - `scripts/seed.py` `seed_catalog()`: 18 products, 15 packages, idempotent (Phase 1 Part 0).
 

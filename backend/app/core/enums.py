@@ -21,6 +21,7 @@ class UserRole(StrEnum):
     WAREHOUSE = "warehouse"      # stock receiving, pick lists, dispatch scanning
     TECHNICIAN = "technician"    # surveys, installations, repairs
     OFFICE = "office"
+    MANAGER = "manager"
     SURVEYOR = "surveyor"
 
 
