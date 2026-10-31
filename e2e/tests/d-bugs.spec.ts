@@ -88,3 +88,12 @@ test('BUG-009 inbox shows requested subsidy', async ({ page }) => {
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(page.locator('.record-card').filter({ hasText: 'Test Customer' })).toContainText('Subsidy requested')
 })
+
+test('BUG-011 order links display readable workflow details', async ({ page }) => {
+  await openAs(page, 'office', '/office/orders')
+  await page.locator('.record-card .text-button').filter({ hasText: 'ORD-000006' }).click()
+  const detail = page.locator('section.detail-card')
+  await expect(detail).toContainText(/Pick list: DSP-/)
+  await expect(detail).toContainText(/Installation job #/)
+  await expect(detail).not.toContainText('{"id":')
+})

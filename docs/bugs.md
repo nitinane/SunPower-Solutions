@@ -171,7 +171,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a05-quote-order-payment-pick-list-job-shown-readably-not-raw-json.png
 - Likely layer: frontend, `frontend/src/pages/office/OfficePage.tsx` (OrdersTab `JSON.stringify`, QuotesTab `window.alert`).
 - PDF requirement: R7, R6
-- Status: open
+- Status: fixed in `fix(BUG-011): display readable order workflow references`
 
 ### BUG-012 [minor] Delivery warranty list shows unit ids, not products
 - Role / screen / URL: warehouse / Dispatch detail after delivery / `/warehouse/dispatches/6`

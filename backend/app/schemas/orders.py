@@ -58,6 +58,7 @@ class OrderLine(BaseModel):
 
 class PickListRef(BaseModel):
     id: int
+    dispatch_number: str
     status: DispatchStatus
 
 

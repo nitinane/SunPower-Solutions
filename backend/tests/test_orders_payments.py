@@ -83,6 +83,7 @@ def test_advance_then_balance_starts_work_once(db, api, office):
     assert first["order"]["amount_paid"] == "50000.00"
     assert first["order"]["balance_due"] == "100000.00"
     assert first["order"]["pick_list"]["status"] == "draft"
+    assert first["order"]["pick_list"]["dispatch_number"].startswith("DSP-")
     assert first["order"]["installation_job"]["status"] == "planned"
     assert first["order"]["installation_job"]["scheduled_date"] is None
     assert _count(db, Dispatch, order_id) == _count(db, InstallationJob, order_id) == 1

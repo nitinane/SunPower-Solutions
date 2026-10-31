@@ -146,7 +146,9 @@ def to_read(db: Session, order: Order) -> OrderRead:
         payments=[
             PaymentRead.model_validate(p) for p in payment_repo.list_for_order(db, order.id)
         ],
-        pick_list=PickListRef(id=pick_list.id, status=pick_list.status) if pick_list else None,
+        pick_list=PickListRef(
+            id=pick_list.id, dispatch_number=pick_list.dispatch_number, status=pick_list.status
+        ) if pick_list else None,
         installation_job=(
             InstallationJobRef(
                 id=job.id,
