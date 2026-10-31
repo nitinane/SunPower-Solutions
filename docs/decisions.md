@@ -89,3 +89,14 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 - P2-4 dashboard warranty_service_cost: under-warranty tickets linked by `warranty_id -> warranties.order_id`; labour = cumulative `labour_hours` x the assigned technician's current `hourly_rate` (no snapshot exists); cancelled tickets still count because the cost was incurred.
 - P2-4 stock_purchases card: receipts whose `received_on` (IST business date) falls from the period start to today.
 - 409 codes: SERIAL_EXISTS, SERIAL_NOT_IN_STOCK, SERIAL_WRONG_PRODUCT, NO_SERIAL_UNIT, UNIT_ALREADY_REPLACED; 422 SERIAL_COUNT_MISMATCH; 404 SERIAL_NOT_FOUND.
+- P3-1 test database: `<db name>_test`, or the URL's own name if it already ends in `_test` (CI's `sunpower_test`), because CI already gives tests a dedicated database.
+- P3-1 test seed: users use the dev default password (tests never log in with it), catalog + stock from scripts/seed.py; tables are truncated once per test session, not per test, because tests already create their own unique data.
+- P3-1 rule coverage: all 14 listed rules already had tests (test_quotes, test_orders_payments, test_dispatch, test_tickets, test_dashboard, test_invoices, test_installations, test_route_protection), so no new rule tests were added.
+- P3-1 alembic.ini: `path_separator = os` added to silence Alembic's deprecation warning when tests run migrations in-process.
+- P3-1 demo seed: lives in backend/scripts/seed_demo.py (run as `python -m scripts.seed_demo`) because it imports the app's services; demo_reset.ps1 lives in a new repo-root scripts/ folder because it drives docker compose from the root.
+- P3-1 demo logins: seed_demo creates manager@ and tech3@ and sets DEMO_PASSWORD on the 8 role logins (director, manager, office, warehouse, tech1-3, support); falls back to the seed default outside production, refuses in production.
+- P3-1 demo surveys: done by tech3 (technicians are allowed surveyors) and approved by the manager because a surveyor cannot approve their own survey.
+- P3-1 demo backdating: "installed 3 years ago" moves enquiry, order, payment, dispatch and job timestamps back 3 x 365 days and re-dates its warranties from the moved delivery date; its order invoice keeps today's date because gapless invoice numbers must run in date order.
+- P3-1 demo pay run: the closed paid repair's charge rows are dated the 15th of last month, so last month's draft pay run has a real repair line.
+- P3-1 demo reset: dev compose files by default (`-Prod` / `COMPOSE=...` for the server); `docker compose up --wait` waits for healthchecks. It runs `down -v`, so it wipes the database and named volumes.
+- P3-1 load test: k6 targets the API port directly (BASE_URL), because the dev stack does not run Nginx; the search serial defaults to INV-3K-0001, Ravi Kumar (demo)'s inverter after a fresh demo reset.

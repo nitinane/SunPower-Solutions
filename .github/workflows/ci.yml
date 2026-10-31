@@ -37,7 +37,7 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check app tests
       - run: alembic upgrade head
-      - run: python -m pytest -q
+      - run: python -m pytest -q --cov=app/services --cov-report=term
   frontend:
     runs-on: ubuntu-latest
     defaults:

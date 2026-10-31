@@ -353,3 +353,7 @@ Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PER
 ### Changed
 - `TicketRead.charges[]` adds `replacement_unit_id` (null except for unit swaps).
 - `GET /dashboard/summary` adds `?sort=recent|profit_asc` (default recent; profit_asc = loss-making jobs first). `profit_per_job[]` adds `warranty_service_cost` (part cost + technician hours x rate for under-warranty tickets); `profit` now subtracts it. `cards` adds `stock_purchases` (sum qty x unit_cost of receipts in the period). Same fields in `GET /public/dashboard/{token}`.
+
+## P3-1
+
+No endpoint changes. New dev tooling: `python -m scripts.seed_demo` (demo customers at every stage) and `make demo-reset` / `scripts/demo_reset.ps1`. Demo logins: director@, manager@, office@, warehouse@, tech1@, tech2@, tech3@, support@ (all `@sunpower.in`); the password is DEMO_PASSWORD.

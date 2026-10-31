@@ -15,7 +15,7 @@
 - Status names come from app/core/enums.py (DB names win). Known: order "waiting for payment" = pending_payment.
 - Ticket columns follow the mapping in docs/decisions.md: ticket_number, faulty_serial_unit_id, issue_description, under_warranty, confirmed_by_name, customer_confirmed_at. Ticket parts and labour are rows in ticket_charges (charge_type part / labour; customer_price = unit price snapshot).
 - Numbered records (ENQ-, QT-, ORD-): insert with a temporary unique value, then set `PREFIX-{id:06d}` in the same transaction. Copy this for new numbered records (tickets: TKT-). Invoices are different (see P2-2).
-- Tests currently write into the dev database (fixed in P3-1).
+- Tests use their own database `<db name>_test` (tests/conftest.py creates, migrates, truncates and seeds it each run); the dev database is never touched.
 - frontend/ belongs to the frontend teammate: never edit frontend/src. Build and deploy config for the frontend is allowed when a task says so.
 - Seed script: scripts/seed.py (users + seed_catalog).
 
@@ -34,7 +34,7 @@ Append to docs/api-changelog.md a section `## <task id>` listing every new or ch
 - [x] P2-2 — Invoices
 - [x] P2-4 — Stock receiving, warranty replacement, after-sales cost in profit
 - [x] P2-3 — Subsidy tracking + technician pay
-- [ ] P3-1 — Test database, rule coverage, demo seed, load test
+- [x] P3-1 — Test database, rule coverage, demo seed, load test
 - [ ] P3-3 — README, diagrams, demo script, review prep, fresh-clone check
 - [ ] AUDIT — Problem-statement coverage + frontend checklist
 
