@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 
 import redis
@@ -6,18 +7,30 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.api.errors import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.db.session import SessionLocal
-from app.exceptions import AppError, app_error_handler
 
 logger = logging.getLogger(__name__)
+
+# Accept a caller's X-Request-ID only if it is short and safe (prevents log injection).
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 
 def create_app() -> FastAPI:
     configure_logging(settings.log_level)
-    application = FastAPI(title="SunPower Solutions API", version="0.1.0")
+    application = FastAPI(
+        title="SunPower Solutions API",
+        version="0.1.0",
+        docs_url="/api/docs",              # Nginx only forwards /api/*, so docs live there
+        openapi_url="/api/openapi.json",
+        redoc_url=None,
+    )
+
+    register_exception_handlers(application)
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -25,11 +38,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    application.add_exception_handler(AppError, app_error_handler)
 
     @application.middleware("http")
     async def request_id_middleware(request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        incoming = request.headers.get("X-Request-ID", "")
+        request_id = incoming if REQUEST_ID_PATTERN.match(incoming) else uuid.uuid4().hex
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
