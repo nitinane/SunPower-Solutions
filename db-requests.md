@@ -5,9 +5,7 @@
 1. **Part 1 (orders) code is not built.** `app/services/orders.py`, `app/repositories/orders.py`
    and `app/api/routes/orders.py` are stubs. Nothing creates the pick list (dispatch row in
    its first status) after the first payment. Not a schema item; schema support is in place.
-2. **`scripts/seed.py` has no catalog seed** (products, solar packages, package components).
-   It seeds users only. Needs a `seed_catalog()` (code task, not schema).
-3. *(nice to have, not in Phase 1 spec)* `dispatches.delivered_by` — audit log covers it for now.
+2. *(nice to have, not in Phase 1 spec)* `dispatches.delivered_by` — audit log covers it for now.
 
 ## Mappings (confirmed, no change needed)
 
@@ -21,6 +19,8 @@
 | stock_movements quantity / created_by | `quantity_delta` (signed) / `performed_by` |
 
 ## Done
+
+- `scripts/seed.py` `seed_catalog()`: 18 products, 15 packages, idempotent (Phase 1 Part 0).
 
 Applied in migration `0e98175dad40_initial_schema` (2026-10-31).
 

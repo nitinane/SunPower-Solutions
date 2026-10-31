@@ -54,3 +54,6 @@ def create_site(db: Session, data: dict[str, Any]) -> Site:
 
 def list_sites(db: Session, customer_id: int) -> list[Site]:
     return list(db.scalars(select(Site).where(Site.customer_id == customer_id).order_by(Site.id)))
+
+def get_site(db: Session, site_id: int) -> Site | None:
+    return db.get(Site, site_id)

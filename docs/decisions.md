@@ -16,3 +16,11 @@
 - dashboard_share_links.period: plain VARCHAR(20) without enum CHECK because no period enum exists yet.
 - tests/test_model_registry.py: added `dashboard_share_links` to EXPECTED_TABLES because the spec adds that table and the test lists every table.
 - compose: ran db with a scratch override `ports: !reset []` because host port 5432 is used by another project; repo compose files unchanged.
+- quotes notes: stored in `quotes.terms` because quotes has no notes column and terms is the free-text field shown on the quote.
+- quote reject reason: kept only in the `quote.rejected` audit entry (`new_data.reason`) because quotes has no reason column.
+- quote/order number: inserted with a temporary unique value, then set to `QT-{id:06d}` / `ORD-{id:06d}` in the same transaction because the column is NOT NULL and the pattern needs the id (same pattern as ENQ-{id:06d}).
+- quote line_total: qty x unit_price before GST, plus a separate `gst_amount` per line, because the spec computes GST per line and sums the quantized lines.
+- solar_packages.base_price: seeded as the sum of component sale prices (preview only; quotes always snapshot live product prices) because the column is NOT NULL.
+- GET /packages lives in the catalog router without a /catalog prefix because the spec path is /packages; price preview logic sits in services/catalog.py so the router does no DB work.
+- quote accept does not change the enquiry status because the spec doesn't ask for it.
+- 409 codes: SURVEY_NOT_APPROVED, PACKAGE_NOT_AVAILABLE, QUOTE_STATUS_INVALID, ORDER_ALREADY_EXISTS.
