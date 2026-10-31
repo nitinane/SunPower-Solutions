@@ -79,3 +79,40 @@ All paths below use `/api/v1`; admin is also allowed. Money is sent as decimal s
 ### POST /quotes/{quote_id}/reject
 - Roles: office, director. Body: `{"reason": string (3–500)}`. `sent -> rejected`.
 - Response 200: `QuoteRead`. Errors: 404 `not_found`, 409 `QUOTE_STATUS_INVALID`.
+
+## P1-2
+
+All endpoints below use `/api/v1` and allow warehouse, director, and admin. Errors use the existing error envelope. Common errors: 401 `unauthorized`, 403 `forbidden`, 404 `not_found` for missing dispatch/item, 422 `validation_error`.
+
+### Shapes
+- `DispatchRead`: `id`, `dispatch_number`, `order_id`, `order_number`, `customer {id,name,phone,email}`, `site {id,address_line1,address_line2,city,state,pincode}`, `status`, `lines`, `dispatched_at`, `delivered_at`, `receiver_name`, `created_at`.
+- Each line: `{order_item_id,sku,name,qty,requires_serial,scanned,serials:[{dispatch_item_id,serialized_unit_id,serial}]}`. `qty` is a decimal string; `scanned` is an integer count of scanned units. Non-serial/service lines have no serial scans. Use `dispatch_item_id` to undo a scan.
+- Dispatch status flow: `draft` (pick list) -> `dispatched` -> `delivered`.
+- `WarrantyRead`: `{id,order_id,order_item_id,product_id,serialized_unit_id,quantity,start_date,end_date}`. Quantity is a decimal string, dates are ISO dates; serialized_unit_id is null for bulk warranties.
+
+### GET /dispatches
+- No body. Query: optional `status`, `page=1`, `page_size=20` (max 100).
+- Response 200: `Page[DispatchRead]`, oldest first. Common errors only.
+
+### GET /dispatches/{id}
+- No body. Response 200: `DispatchRead`. Common errors only.
+
+### POST /dispatches/{id}/scan
+- Body: `{serial: string}`. Spaces are removed and letters uppercased. Repeated scan on the same dispatch returns 200 with unchanged scans.
+- Response 200: `DispatchRead` with updated lines.
+- Errors: 404 `SERIAL_NOT_FOUND`; 409 `DISPATCH_LOCKED`, `SERIAL_WRONG_PRODUCT`, `LINE_ALREADY_COMPLETE`, `SERIAL_ALREADY_SHIPPED`, `SERIAL_NOT_IN_STOCK`; common errors.
+
+### DELETE /dispatches/{id}/scan/{dispatch_item_id}
+- No body. Draft dispatch only. Response 200: updated `DispatchRead`.
+- Errors: 409 `DISPATCH_LOCKED`; common errors (404 if the scan does not belong to this dispatch).
+
+### POST /dispatches/{id}/send
+- No body. Response 200: `DispatchRead` with status `dispatched`; order also becomes `dispatched`.
+- Requires all serial lines scanned and enough available non-serial stock. Deducts stock and records movements atomically; service lines consume no stock.
+- Errors: 409 `DISPATCH_LOCKED`, `SCAN_INCOMPLETE` (message lists missing lines/counts), `INSUFFICIENT_STOCK` (names product), `SERIAL_ALREADY_SHIPPED`, `SERIAL_NOT_IN_STOCK`; common errors.
+
+### POST /dispatches/{id}/deliver
+- Body: `{receiver_name: string, delivered_at?: timezone-aware datetime|null}`. Defaults to now; blank receiver names and timezone-free timestamps return 422.
+- Response 200: all `DispatchRead` fields plus `{warranties_created: integer, warranties: WarrantyRead[]}`. Order becomes `delivered`.
+- Atomically creates one warranty per scanned serialized unit, or one per non-serial order line, for products with warranty_months > 0. Warranty dates start on the Asia/Kolkata delivery date; expiry adds calendar months and clamps to month end.
+- Errors: 409 `ALREADY_DELIVERED`, `DISPATCH_LOCKED` (not dispatched); common errors.

@@ -27,7 +27,7 @@ Append to docs/api-changelog.md a section `## <task id>` listing every new or ch
 - [x] P1-0 — Quotes + catalog seed
 - [x] S0 — Setup
 - [x] P1-1 — Payments create the pick list and crew job
-- [ ] P1-2 — Serial scanning, dispatch, warranties on delivery
+- [x] P1-2 — Serial scanning, dispatch, warranties on delivery
 - [ ] P1-3 — Service tickets, director dashboard, full-chain test  (PHASE 1 CHECKPOINT)
 - [ ] P3-2 — Security pass, production deploy files, CI  (done early on purpose: deploy early)
 - [ ] P2-1 — Crew schedule + installation form

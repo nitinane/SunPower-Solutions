@@ -12,10 +12,15 @@ import os
 import sys
 from decimal import Decimal
 
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+
 from app.core.config import settings
-from app.core.enums import PackageType, ProductCategory, UserRole
+from app.core.enums import PackageType, ProductCategory, SerialUnitStatus, UserRole
 from app.core.security import hash_password
 from app.db.session import SessionLocal
+from app.models.catalog import Product
+from app.models.inventory import Inventory, SerializedUnit
 from app.repositories import catalog as catalog_repo
 from app.repositories import users as user_repo
 
@@ -163,11 +168,34 @@ def seed_catalog(db) -> tuple[int, int]:
     return products_created, packages_created
 
 
+def seed_stock(db) -> None:
+    """Insert missing demo stock only; never replenish consumed stock or reset serial status."""
+    for product in db.scalars(select(Product).order_by(Product.id)):
+        if product.category == ProductCategory.SERVICE:
+            continue
+        if product.tracks_serial:
+            for number in range(1, 11):
+                db.execute(insert(SerializedUnit).values(
+                    product_id=product.id, serial_number=f"{product.sku}-{number:04d}",
+                    status=SerialUnitStatus.IN_STOCK,
+                ).on_conflict_do_nothing())
+        else:
+            quantity = 1000 if product.category == ProductCategory.PANEL else (
+                2000 if product.category == ProductCategory.WIRE else 500
+            )
+            db.execute(insert(Inventory).values(
+                product_id=product.id, quantity_on_hand=Decimal(quantity),
+                quantity_reserved=Decimal("0"),
+            ).on_conflict_do_nothing())
+    db.flush()
+
+
 def main() -> None:
     password = _seed_password()
     with SessionLocal() as db:
         created = seed_users(db, password)
         products, packages = seed_catalog(db)
+        seed_stock(db)
         db.commit()
         total_products = catalog_repo.count_products(db)
         total_packages = catalog_repo.count_packages(db)

@@ -26,3 +26,7 @@
 - 409 codes: SURVEY_NOT_APPROVED, PACKAGE_NOT_AVAILABLE, QUOTE_STATUS_INVALID, ORDER_ALREADY_EXISTS.
 - P1-1 installation job: uses `planned` with `scheduled_at=NULL` because it is the existing unscheduled state; pick lists use `draft` and `DSP-{id:06d}`.
 - P1-1 idempotency: reject a key belonging to another order with `IDEMPOTENCY_KEY_REUSED` because replay must never mix payment and order records.
+- P1-2 service lines: show installation services in dispatch detail but exclude them from stock seeding, stock deductions, and stock movements because service products are never stocked.
+- P1-2 warranties: use the product's current `warranty_months` at delivery because the task explicitly specifies product warranty duration; start dates use the delivery timestamp in Asia/Kolkata.
+- P1-2 seed stock: insert missing rows only, preserving existing balances and serial statuses, because rerunning the seed must not replenish sold stock.
+- P1-2 delivery: also moves the order to `delivered` with an audit entry because subsequent installation and invoice workflows depend on delivery state.
