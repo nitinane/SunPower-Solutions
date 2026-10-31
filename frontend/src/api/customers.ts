@@ -1,0 +1,2 @@
+/** customers API stub. */
+export {}

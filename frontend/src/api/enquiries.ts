@@ -1,0 +1,2 @@
+/** enquiries API stub. */
+export {}

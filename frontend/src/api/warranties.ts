@@ -1,0 +1,2 @@
+/** warranties API stub. */
+export {}

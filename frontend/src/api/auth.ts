@@ -1,0 +1,2 @@
+/** auth API stub. */
+export {}

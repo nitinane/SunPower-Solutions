@@ -1,0 +1,2 @@
+/** installations API stub. */
+export {}

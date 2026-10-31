@@ -1,0 +1,2 @@
+/** payments API stub. */
+export {}

@@ -1,0 +1,2 @@
+/** surveys API stub. */
+export {}

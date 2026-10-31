@@ -1,0 +1,1 @@
+"""Invoices schema stub. TODO: implement with the owning team."""

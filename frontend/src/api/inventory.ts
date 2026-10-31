@@ -1,0 +1,2 @@
+/** inventory API stub. */
+export {}
