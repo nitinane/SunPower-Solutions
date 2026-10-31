@@ -20,7 +20,7 @@ The backend implements these 13 workflows. The React role screens in this checko
 | GST invoices | Delivery and billable repair closure create immutable invoices with transactional financial-year sequences. |
 | Subsidies | Applications advance one step at a time and require the appropriate document checklist. |
 | Technician pay | Monthly drafts use completed installation hours and repair visits; paid runs cannot be recalculated. |
-| Director dashboard | SQL aggregates include material, installation labour and warranty service cost; public shares expire and can be revoked. |
+| Director dashboard | SQL aggregates include material, installation labour, warranty service cost, advance payments and technician person-hours; public shares expire and can be revoked. |
 
 ## Demo access
 
@@ -186,6 +186,14 @@ Phone/serial indexes make exact lookup efficient. PostgreSQL is the likely next 
 ## Roadmap
 
 Instant estimate; QR complaint stickers; customer tracking links; an AI call sheet; WhatsApp Business API; SMS (requires DLT registration); credit notes; HSN codes on invoices; completed frontend workflows. Serialized warranty replacement is already implemented, not a roadmap item.
+
+The [problem-statement audit](docs/ps-coverage.md) records **17 DONE / 3 PARTIAL / 0 MISSING**
+backend requirements, with **238 passing tests** after the audit fixes. Remaining delivery work
+includes the mobile installation/signature screens, decoded-image and blank-signature validation,
+customer access, quote/invoice print and export views, authorized subsidy-document retrieval,
+a Support/Technician parts picker that does not expose purchase costs, and verified live HTTPS
+deployment. The [frontend checklist](docs/frontend-checklist.md) maps 23 screens to the real
+OpenAPI contract, role permissions, fields, errors and state gates; it does not claim those UI screens exist.
 
 ## Eight key decisions
 

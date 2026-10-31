@@ -36,7 +36,7 @@ Append to docs/api-changelog.md a section `## <task id>` listing every new or ch
 - [x] P2-3 — Subsidy tracking + technician pay
 - [x] P3-1 — Test database, rule coverage, demo seed, load test
 - [x] P3-3 — README, diagrams, demo script, review prep, fresh-clone check
-- [ ] AUDIT — Problem-statement coverage + frontend checklist
+- [x] AUDIT — Problem-statement coverage + frontend checklist
 
 ---
 

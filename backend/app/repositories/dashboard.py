@@ -3,7 +3,7 @@
 from sqlalchemy import Date, Numeric, case, cast, func, select
 from sqlalchemy.orm import Session
 
-from app.core.enums import OrderStatus, PaymentStatus, TicketStatus
+from app.core.enums import ChargeType, OrderStatus, PaymentStatus, PaymentType, TicketStatus
 from app.models.catalog import SolarPackage
 from app.models.customers import Customer
 from app.models.dashboard import DashboardShareLink
@@ -134,6 +134,31 @@ def summary_blocks(db: Session, start, end, today, *, start_date, sort="recent")
         )
         .scalar_subquery()
     )
+    advances = (
+        select(func.coalesce(func.sum(Payment.amount), 0))
+        .where(
+            Payment.status == PaymentStatus.COMPLETED,
+            Payment.payment_type == PaymentType.ADVANCE,
+            Payment.paid_at >= start,
+            Payment.paid_at < end,
+        )
+        .scalar_subquery()
+    )
+    install_hours = (
+        select(func.coalesce(func.sum(JobTechnician.hours_worked), 0))
+        .join(InstallationJob, InstallationJob.id == JobTechnician.job_id)
+        .where(InstallationJob.completed_at >= start, InstallationJob.completed_at < end)
+        .scalar_subquery()
+    )
+    repair_hours = (
+        select(func.coalesce(func.sum(TicketCharge.quantity), 0))
+        .where(
+            TicketCharge.charge_type == ChargeType.LABOUR,
+            TicketCharge.created_at >= start,
+            TicketCharge.created_at < end,
+        )
+        .scalar_subquery()
+    )
     profit_total = select(func.coalesce(func.sum(profits.c.profit), 0)).scalar_subquery()
     stock_purchases = (
         select(func.coalesce(func.sum(StockReceiptLine.qty * StockReceiptLine.unit_cost), 0))
@@ -153,6 +178,8 @@ def summary_blocks(db: Session, start, end, today, *, start_date, sort="recent")
                 enquiry_count.label("new_enquiries"),
                 order_count.label("orders_confirmed"),
                 _money(payments).label("payments_received"),
+                _money(advances).label("advance_payments"),
+                _money(install_hours + repair_hours).label("technician_hours"),
                 _money(profit_total).label("profit"),
                 _money(stock_purchases).label("stock_purchases"),
                 unfinished_count.label("unfinished_jobs"),

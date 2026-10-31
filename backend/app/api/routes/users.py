@@ -16,7 +16,9 @@ router = APIRouter(prefix="/users", tags=["users"])
 DbSession = Annotated[Session, Depends(get_db)]
 Staff = Annotated[
     User,
-    Depends(require_role(UserRole.OFFICE, UserRole.DIRECTOR, UserRole.SUPPORT, UserRole.WAREHOUSE)),
+    Depends(require_role(
+        UserRole.OFFICE, UserRole.MANAGER, UserRole.DIRECTOR, UserRole.SUPPORT, UserRole.WAREHOUSE
+    )),
 ]
 
 

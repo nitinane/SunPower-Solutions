@@ -3,6 +3,7 @@
 import hashlib
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -169,3 +170,41 @@ def test_stock_purchases_card_is_exact(db, director, warehouse):
     db.refresh(product)
     product.cost_price = cost
     db.commit()
+
+
+def test_advance_and_technician_hours_cards_use_period_not_order_date(
+    db, api, office, director, monkeypatch
+):
+    from test_pay import _finished_job, _repair, _tech
+
+    from app.models.payments import Payment
+
+    fixed = datetime(2040, 11, 4, 7, 0, tzinfo=UTC)
+    monkeypatch.setattr(service, "_now", lambda: fixed)
+    staff = api(office)
+    tech, other = _tech(db, "250"), _tech(db, "300")
+    inside = datetime(2040, 10, 31, 18, 45, tzinfo=UTC)  # Nov 1 in IST
+    outside = datetime(2040, 10, 31, 18, 29, tzinfo=UTC)
+    job = _finished_job(db, staff, inside, [(tech, "2.25", "250"), (other, "2.25", "300")])
+    payment = db.scalars(select(Payment).where(Payment.order_id == job.order_id)).one()
+    payment.paid_at = inside
+    payment.payment_type = "advance"
+    advance = payment.amount
+    _repair(db, job.order_id, tech, "1.50", inside)
+    _repair(db, job.order_id, tech, "9.00", outside)
+    # A balance payment in the period is received money, but is not an advance.
+    db.add(Payment(order_id=job.order_id, amount=Decimal("10.00"), payment_type="balance",
+                   method="cash", idempotency_key=uuid4().hex, paid_at=inside))
+    db.commit()
+    response = director.get("/api/v1/dashboard/summary?period=month")
+    assert response.status_code == 200, response.text
+    cards = response.json()["cards"]
+    assert Decimal(cards["advance_payments"]) == advance
+    assert Decimal(cards["payments_received"]) == advance + Decimal("10.00")
+    assert cards["technician_hours"] == "6.00"  # both crew members + one repair visit
+    job.completed_at = outside
+    payment.paid_at = outside
+    db.commit()
+    cards = director.get("/api/v1/dashboard/summary?period=month").json()["cards"]
+    assert cards["advance_payments"] == "0.00"
+    assert cards["technician_hours"] == "1.50"

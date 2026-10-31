@@ -14,6 +14,8 @@ class DashboardCards(BaseModel):
     new_enquiries: int
     orders_confirmed: int
     payments_received: Decimal
+    advance_payments: Decimal
+    technician_hours: Decimal
     profit: Decimal
     stock_purchases: Decimal
     unfinished_jobs: int
