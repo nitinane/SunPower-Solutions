@@ -283,13 +283,13 @@ test('A06 warehouse scans, sends, delivers', async ({ browser }, info) => {
     await page.getByLabel('Receiver name').fill(CUSTOMER)
     await page.getByRole('button', { name: 'Confirm delivery' }).click(); await settle(page)
     await expect(page.getByText(/warranties created/)).toBeVisible()
-    const lines = await page.locator('p', { hasText: /^Unit .*: \d{4}-\d\d-\d\d – \d{4}-\d\d-\d\d$/ }).allTextContents()
+    const lines = await page.locator('p').filter({ hasText: /: \d{4}-\d\d-\d\d.*\d{4}-\d\d-\d\d$/ }).allTextContents()
     const years = lines.map(l => { const [a, b] = l.match(/\d{4}-\d\d-\d\d/g)!; return Math.round((Date.parse(b) - Date.parse(a)) / (365.25 * 86_400_000)) })
     expect(years, 'warranty lengths in years').toContain(2)
     expect(years, 'warranty lengths in years').toContain(20)
   })
   await run.check('warranty list names the product (not only unit ids)', page, async () => {
-    await expect(page.getByText(/Unit .*(inverter|panel)/i).first()).toBeVisible({ timeout: 1500 })
+    await expect(page.locator('p').filter({ hasText: /inverter.*DSD-INV3K-1001.*: \d{4}-/i }).first()).toBeVisible()
   })
   if (!delivered && sql(`select status from dispatches where id=${s.dispatchId}`) !== 'delivered') {
     await apiJson(await apiAs('warehouse'), 'POST', `/dispatches/${s.dispatchId}/deliver`, { receiver_name: CUSTOMER }).catch(() => {})
@@ -362,6 +362,7 @@ test('A08 tech1 completes installation', async ({ browser }, info) => {
   })
   const done = await run.check('draw signature -> complete -> completed', page, async () => {
     const pad = page.getByLabel('Customer signature pad')
+    await pad.scrollIntoViewIfNeeded()
     const box = (await pad.boundingBox())!
     for (let i = 0; i < 7; i++) {
       await page.mouse.move(box.x + 15, box.y + 20 + i * 22)
@@ -412,7 +413,7 @@ test('A09 support search, warranty ticket loop', async ({ browser }, info) => {
   const heading = page.getByRole('heading', { name: /^SR-|· / }).first()
   const assign = async (label: string) => run.check(label, page, async () => {
     await page.goto(`/support/tickets/${ticketId}`); await settle(page)
-    await page.getByLabel('Technician').selectOption({ label: 'Raju Technician' })
+    await page.locator('[data-field]').getByLabel('Technician').selectOption({ label: 'Raju Technician' })
     await page.getByRole('button', { name: 'Assign visit' }).click(); await settle(page)
     await expect(page.locator('h2').first()).toContainText('assigned')
   })

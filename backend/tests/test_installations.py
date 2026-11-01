@@ -258,12 +258,20 @@ def test_planned_jobs_ignore_order_status(db, api, office, manager, order_status
     job = db.get(InstallationJob, job_id)
     db.get(Order, job.order_id).status = OrderStatus(order_status)
     db.commit()
-    response = manager.get("/api/v1/installation-jobs?status=planned")
-    assert response.status_code == 200
-    assert job_id in [row["job_id"] for row in response.json()["items"]]
+    def planned_ids():
+        ids = []
+        page = 1
+        while True:
+            response = manager.get(f"/api/v1/installation-jobs?status=planned&page={page}")
+            assert response.status_code == 200
+            body = response.json()
+            ids.extend(row["job_id"] for row in body["items"])
+            if len(ids) >= body["total"]:
+                return ids
+            page += 1
+
+    assert job_id in planned_ids()
     assert api(office).get("/api/v1/installation-jobs?status=planned").status_code == 403
     job.status = InstallationJobStatus.SCHEDULED
     db.commit()
-    assert job_id not in [row["job_id"] for row in manager.get(
-        "/api/v1/installation-jobs?status=planned"
-    ).json()["items"]]
+    assert job_id not in planned_ids()
