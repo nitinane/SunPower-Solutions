@@ -57,7 +57,7 @@ export class Run {
   constructor(public name: string, public info?: TestInfo) {}
 
   watch(page: Page, who: string) {
-    page.on('console', msg => { if (msg.type() !== 'error') return; const text = msg.text().slice(0, 600); this.events.push({ kind: 'console', who, url: page.url(), text, step: this.step, expected: this.expected.length > 0 && /Failed to load resource: the server responded with a status of (409|404)/.test(text) }) })
+    page.on('console', msg => { if (msg.type() !== 'error') return; const text = msg.text().slice(0, 600); this.events.push({ kind: 'console', who, url: page.url(), text, step: this.step, expected: (msg.location().url.includes('/api/v1/me/pay?') && /status of 404/.test(text)) || (this.expected.length > 0 && /Failed to load resource: the server responded with a status of (409|404)/.test(text)) }) })
     page.on('pageerror', err => this.events.push({ kind: 'pageerror', who, url: page.url(), text: String(err.stack || err).slice(0, 800), step: this.step }))
     page.on('dialog', d => { this.events.push({ kind: 'console', who, url: page.url(), text: `[dialog ${d.type()}] ${d.message()}`, step: this.step, expected: true }); void d.accept() })
     page.on('response', async res => {
@@ -65,7 +65,8 @@ export class Run {
       let body = ''
       try { body = (await res.text()).slice(0, 600) } catch { /* body gone */ }
       const method = res.request().method()
-      const expected = this.expected.some(e => e.status === res.status() && e.re.test(`${method} ${res.url()}`))
+      // No pay run is the documented empty-state response, handled as null by the frontend.
+      const expected = (res.status() === 404 && new URL(res.url()).pathname === '/api/v1/me/pay') || this.expected.some(e => e.status === res.status() && e.re.test(`${method} ${res.url()}`))
       this.events.push({ kind: 'api', who, url: res.url(), method, status: res.status(), text: body, expected, step: this.step })
     })
   }

@@ -191,7 +191,9 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (log `e2e/artifacts/log-b-tech1-smoke.json`)
 - Likely layer: contract mismatch. The backend uses 404 for "no data yet"; it could return 200 with `null`, or the frontend could skip the console noise.
 - PDF requirement: R17
-- Status: open
+- Status: fixed in `fix(BUG-013): treat missing pay runs as empty data`
+
+- Verification: the frontend maps the API's 404 to successful null data without retries or application error logging; Chromium's native network diagnostic remains an expected HTTP 404 in the e2e recorder.
 
 ### BUG-014 [minor] Field screens on a phone: tap targets below 40 px, inventory table wider than screen
 - Role / screen / URL: tech1 and warehouse at 360x740: `/technician/today`, `/technician/jobs/6`, `/warehouse/dispatches`, `/warehouse/dispatches/6`, `/inventory`

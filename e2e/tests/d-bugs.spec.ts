@@ -113,3 +113,15 @@ test('BUG-012 delivery warranties show product and serial', async ({ page }) => 
   await expect(page.locator('[data-field]')).toContainText('Solar inverter 3 kW - DSD-INV3K-1001')
   await expect(page.locator('[data-field]')).toContainText('Solar panel (bulk)')
 })
+
+test('BUG-013 missing pay run is empty data without retries', async ({ page }) => {
+  let calls = 0
+  await page.route('**/api/v1/me/pay?*', route => { calls++; return route.fulfill({ status: 404, json: { error: { code: 'not_found', message: 'No pay run yet' } } }) })
+  await openAs(page, 'tech1', '/technician/today')
+  await expect(page.getByText('No pay run for this month.')).toBeVisible()
+  calls = 0
+  await page.getByLabel('Month', { exact: true }).fill('2026-02')
+  await expect(page.getByText('No pay run for this month.')).toBeVisible()
+  await page.waitForTimeout(4000)
+  expect(calls).toBe(1)
+})
