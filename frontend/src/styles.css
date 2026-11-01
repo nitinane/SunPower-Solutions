@@ -128,3 +128,25 @@ main { padding: 24px; }.workspace-banner,.panel,.kpi-card,.safety-card,.weather-
 .ops-state a.ops-primary:hover { color: #fff; background: #5c3d54; box-shadow: 0 3px 10px #5c3d5433; }
 .ops-state a.ops-primary:focus-visible { outline: 3px solid #bd9db4; outline-offset: 3px; }
 @media (max-width: 520px) { .action-forms { left: 12px; right: 12px; width: auto; } }
+
+/* Field controls and inventory actions stay usable on phones. */
+@media (max-width: 650px) {
+  .shared-layout > .shared-sidebar { width: 64px; }
+  .shared-layout-content { min-width: 0; padding: 8px; }
+  [data-field] .ops-page-header { padding: 16px 12px; }
+  [data-field] .ops-content { padding-right: 8px; padding-left: 8px; }
+  [data-field] .detail-card { padding: 12px; }
+  .inventory-content { padding: 0 12px 24px; }
+  .inventory-content .ops-toolbar { flex-direction: column; align-items: stretch; }
+  .inventory-content .ops-toolbar label { display: flex; align-items: center; gap: 8px; }
+  .inventory-content input:not([type=checkbox]), .inventory-content button { min-height: 44px; }
+  .inventory-content input[type=checkbox] { width: 44px; height: 44px; flex-shrink: 0; }
+  .inventory-content .ops-search { height: auto; min-width: 0; }
+  .inventory-content .ops-table { min-width: 0; }
+  .inventory-content .ops-table thead { display: none; }
+  .inventory-content .ops-table, .inventory-content .ops-table tbody,
+  .inventory-content .ops-table tr, .inventory-content .ops-table td { display: block; width: 100%; }
+  .inventory-content .ops-table tr + tr { border-top: 2px solid #dce4e7; }
+  .inventory-content .ops-table td { border: 0; padding: 8px 12px; overflow-wrap: anywhere; }
+  .inventory-content .ops-table td::before { content: attr(data-label); display: block; color: #788890; font-size: 11px; margin-bottom: 4px; }
+}

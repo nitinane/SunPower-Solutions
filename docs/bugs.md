@@ -203,7 +203,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/c-tech1-mobile-tech1-technician-today-controls-smaller-than-40-px.png, e2e/artifacts/c-tech1-mobile-tech1-technician-jobs-6-controls-smaller-than-40-px.png, e2e/artifacts/c-warehouse-mobile-warehouse-warehouse-dispatches-controls-smaller-than-40-px.png, e2e/artifacts/c-warehouse-mobile-warehouse-inventory-controls-cut-off-at-right-edge.png
 - Likely layer: frontend, `frontend/src/pages/field/ui.tsx` (Page styles cover button/select only, not links/checkboxes) and OperationsPage inventory table.
 - PDF requirement: R10
-- Status: open
+- Status: fixed in `fix(BUG-014): size mobile controls and stack inventory rows`
 
 ### BUG-015 [cosmetic] Dispatch scan counters show "1/1.000 scanned"
 - Role / screen / URL: warehouse / Dispatch detail / `/warehouse/dispatches/6`
