@@ -4,6 +4,13 @@ All paths are under `/api/v1`. Auth is the session cookie. `admin` is always all
 Money fields are JSON strings (e.g. `"12345.00"`). Errors: `{"error": {"code", "message", "fields"}}`.
 Common errors on every endpoint: 401 `unauthorized` (not logged in), 403 `forbidden` (wrong role), 422 `validation_error`.
 
+## Live workspace trend
+
+- `GET /dashboard/trend?months=12` — director (admin override). `months` is 1–36, default 12.
+- Returns an ascending array of `{month: "YYYY-MM", booked_order_value: "12345.00", payments_received: "6789.00"}` including zero-valued months and the current partial IST month through now.
+- Bookings use the accepted quote total including GST, grouped by order confirmation time; cancelled/unconfirmed orders are excluded. Cash uses completed order and service payments grouped by payment time, independently of the booking date. Failed, pending and refunded payments are excluded.
+- Workspace landing pages now use authenticated APIs rather than static demonstration figures. Visitors without the required role receive a sign-in prompt.
+
 ## P1-1
 
 All paths below use `/api/v1`; admin is also allowed. Money is sent as decimal strings.

@@ -1,7 +1,7 @@
 export function formatMoney(value: string | null | undefined) {
   if (!value) return '₹0.00'
   const [whole, fraction] = value.replace(/^₹/, '').split('.')
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const grouped = (whole.startsWith('-') ? '-' : '') + BigInt(whole.replace(/^-/, '')).toLocaleString('en-IN')
   return `₹${grouped}.${(fraction ?? '00').padEnd(2, '0').slice(0, 2)}`
 }
 export function addDecimalStrings(left: string, right: string) {

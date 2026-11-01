@@ -7,6 +7,8 @@ export type Share = { id: number; period: string; expires_at: string; created_at
 export type PayRunSummary = { id: number; month: string; status: string; paid_on: string | null; payment_reference: string | null; technician_count: number; total_amount: string }
 export type PayRun = PayRunSummary & { lines: { technician_id: number; technician_name: string; install_hours: string; repair_hours: string; rate: string; install_amount: string; repair_amount: string; amount: string; jobs: unknown[]; tickets: unknown[] }[] }
 export const getDashboardSummary = (period: 'today' | 'week' | 'month' = 'month', sort: 'recent' | 'profit_asc' = 'recent') => apiFetch<DashboardSummary>(`/dashboard/summary?period=${period}&sort=${sort}`)
+export type DashboardTrendPoint = { month: string; booked_order_value: string; payments_received: string }
+export const getDashboardTrend = (months = 12) => apiFetch<DashboardTrendPoint[]>(`/dashboard/trend?months=${months}`)
 export const getShares = (page = 1, page_size = 20) => apiFetch<Page<Share>>(`/dashboard/share?page=${page}&page_size=${page_size}`)
 export const createShare = (period: 'today' | 'week' | 'month', expires_in_hours: number) => apiFetch<{ id: number; url: string; expires_at: string }>('/dashboard/share', { method: 'POST', body: JSON.stringify({ period, expires_in_hours }) })
 export const revokeShare = (id: number) => apiFetch<void>(`/dashboard/share/${id}`, { method: 'DELETE' })

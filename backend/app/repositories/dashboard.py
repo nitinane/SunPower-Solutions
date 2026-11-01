@@ -237,6 +237,33 @@ def summary_blocks(db: Session, start, end, today, *, start_date, sort="recent")
     return cards, jobs, unfinished, repairs
 
 
+def monthly_totals(db: Session, start, end):
+    # Aggregate independently: joining payments to orders would repeat booked value.
+    booked_month = func.date_trunc("month", func.timezone("Asia/Kolkata", Order.confirmed_at))
+    paid_month = func.date_trunc("month", func.timezone("Asia/Kolkata", Payment.paid_at))
+    booked = db.execute(
+        select(booked_month, _money(func.sum(Quote.total)))
+        .join(Quote, Quote.id == Order.quote_id)
+        .where(
+            Order.confirmed_at >= start, Order.confirmed_at < end,
+            Order.status != OrderStatus.CANCELLED,
+        )
+        .group_by(booked_month)
+    ).all()
+    received = db.execute(
+        select(paid_month, _money(func.sum(Payment.amount)))
+        .where(
+            Payment.paid_at >= start, Payment.paid_at < end,
+            Payment.status == PaymentStatus.COMPLETED,
+        )
+        .group_by(paid_month)
+    ).all()
+    return (
+        {month.strftime("%Y-%m"): value for month, value in booked},
+        {month.strftime("%Y-%m"): value for month, value in received},
+    )
+
+
 def create_share(db: Session, **values):
     row = DashboardShareLink(**values)
     db.add(row)

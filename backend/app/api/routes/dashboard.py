@@ -11,6 +11,7 @@ from app.models.users import User
 from app.schemas.common import Page
 from app.schemas.dashboard import (
     DashboardSummary,
+    DashboardTrendPoint,
     JobSort,
     Period,
     ShareCreate,
@@ -31,6 +32,13 @@ def summary(
     db: Db, actor: Director, period: Period = "month", sort: JobSort = "recent"
 ) -> DashboardSummary:
     return service.summary(db, period, sort)
+
+
+@router.get("/dashboard/trend", response_model=list[DashboardTrendPoint])
+def trend(
+    db: Db, actor: Director, months: Annotated[int, Query(ge=1, le=36)] = 12
+) -> list[DashboardTrendPoint]:
+    return service.trend(db, months)
 
 
 @router.post("/dashboard/share", response_model=ShareRead, status_code=status.HTTP_201_CREATED)

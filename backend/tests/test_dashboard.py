@@ -112,6 +112,72 @@ def test_dashboard_director_only_and_expiry_limit(api, office):
     assert client.delete("/api/v1/dashboard/share/1").status_code == 403
 
 
+def test_trend_groups_ist_months_without_repeating_booked_value(db, director, pick, monkeypatch):
+    from app.models.payments import Payment
+
+    monkeypatch.setattr(service, "_now", lambda: datetime(2060, 11, 15, tzinfo=UTC))
+    order = db.get(Order, pick["order_id"])
+    quote = db.get(Quote, order.quote_id)
+    # Nov 1 IST, still October in UTC. The order is booked only once, despite payments.
+    order.confirmed_at = datetime(2060, 10, 31, 18, 30, tzinfo=UTC)
+    original = db.scalars(select(Payment).where(Payment.order_id == order.id)).one()
+    original.paid_at = datetime(2060, 10, 31, 18, 29, tzinfo=UTC)
+    for amount, paid_at, status in [
+        ("12.34", order.confirmed_at, "completed"),
+        ("0.11", order.confirmed_at, "completed"),
+        ("99.00", order.confirmed_at, "failed"),
+        ("98.00", order.confirmed_at, "pending"),
+        ("97.00", order.confirmed_at, "refunded"),
+        ("96.00", datetime(2060, 11, 16, tzinfo=UTC), "completed"),
+    ]:
+        db.add(Payment(order_id=order.id, amount=Decimal(amount), payment_type="balance",
+                       method="cash", status=status, paid_at=paid_at, idempotency_key=uuid4().hex))
+    db.commit()
+    response = director.get("/api/v1/dashboard/trend?months=12")
+    assert response.status_code == 200, response.text
+    rows = response.json()
+    assert len(rows) == 12
+    assert [rows[0]["month"], rows[-1]["month"]] == ["2059-12", "2060-11"]
+    assert rows[0] == {
+        "month": "2059-12", "booked_order_value": "0.00", "payments_received": "0.00",
+    }
+    assert rows[-1]["booked_order_value"] == str(quote.total)
+    assert rows[-1]["payments_received"] == "12.45"
+    assert Decimal(rows[-2]["payments_received"]) == original.amount
+    assert rows[-2]["booked_order_value"] == "0.00"
+    # Cash remains received even if the booking is subsequently cancelled.
+    order.status = "cancelled"
+    db.commit()
+    row = director.get("/api/v1/dashboard/trend?months=1").json()[0]
+    assert row == {"month": "2060-11", "booked_order_value": "0.00",
+                   "payments_received": "12.45"}
+
+
+def test_trend_window_excludes_older_and_unconfirmed_bookings(db, director, pick, monkeypatch):
+    from app.models.payments import Payment
+
+    monkeypatch.setattr(service, "_now", lambda: datetime(2070, 11, 15, tzinfo=UTC))
+    order = db.get(Order, pick["order_id"])
+    order.confirmed_at = datetime(2069, 11, 30, 18, 29, tzinfo=UTC)
+    payment = db.scalars(select(Payment).where(Payment.order_id == order.id)).one()
+    payment.paid_at = order.confirmed_at
+    db.commit()
+    rows = director.get("/api/v1/dashboard/trend").json()
+    assert all(row["booked_order_value"] == row["payments_received"] == "0.00" for row in rows)
+    order.confirmed_at = None
+    db.commit()
+    row = director.get("/api/v1/dashboard/trend?months=1").json()[0]
+    assert row["booked_order_value"] == "0.00"
+
+
+def test_trend_roles_and_month_validation(db, api, office, director):
+    assert api(office).get("/api/v1/dashboard/trend").status_code == 403
+    assert TestClient(create_app()).get("/api/v1/dashboard/trend").status_code == 401
+    assert api(_user(db, UserRole.ADMIN)).get("/api/v1/dashboard/trend").status_code == 200
+    for months in (0, 37, "invalid"):
+        assert director.get(f"/api/v1/dashboard/trend?months={months}").status_code == 422
+
+
 def test_dashboard_share_validation(director):
     for body in (
         {"period": "year"},

@@ -59,6 +59,12 @@ class DashboardSummary(BaseModel):
     open_repairs: list[OpenRepair]
 
 
+class DashboardTrendPoint(BaseModel):
+    month: str
+    booked_order_value: Decimal
+    payments_received: Decimal
+
+
 class ShareCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     period: Period

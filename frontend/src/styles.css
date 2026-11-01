@@ -163,3 +163,11 @@ main { padding: 24px; }.workspace-banner,.panel,.kpi-card,.safety-card,.weather-
 .top-popover { position: absolute; right: 0; top: 100%; z-index: 100; width: min(340px, 85vw); max-height: 65vh; overflow: auto; padding: 18px; background: white; color: #222; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 25px #0002; }
 .top-popover h2 { font-size: 16px; }
 .top-popover a { display: block; padding: 10px 0; color: #57344f; }
+
+.workspace-state { margin: 24px 40px; padding: 28px; }
+.workspace-state .action-button { display: inline-flex; margin-top: 12px; }
+.workspace-empty { padding: 24px; color: #6b7280; }
+.live-trend-values { padding: 16px 24px; border-top: 1px solid #eee; }
+.live-trend-values summary { cursor: pointer; color: #57344f; }
+.queue-action, .view-all { text-decoration: none; }
+@media (max-width: 650px) { .workspace-state { margin: 12px; padding: 20px; } }

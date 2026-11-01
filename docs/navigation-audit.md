@@ -77,3 +77,19 @@ Workspace landing URLs remain public entry points so signed-out/wrong-role visit
 ## Validation
 
 Part A: frontend production build passes; ruff is clean; pytest: 254 passed; full Playwright suite: 46 passed (4.6 minutes), using a normal demo reset. Tests honor the separate SEED_PASSWORD and DEMO_PASSWORD fixture credentials.
+
+## Live workspace follow-up (revised Part B)
+
+The user confirmed the 300-order dataset exists only in a teammate's database and removed dataset discovery, bulk import and the `-Bulk` switch from scope. Used the normal `scripts/demo_reset.ps1` seed (nine demo customers); no bulk records were imported.
+
+| Workspace | Live sources |
+| --- | --- |
+| Owner | Month summary cards; `/dashboard/trend?months=12`; recent `/orders` with real order status as stage; submitted surveys, planned jobs and open repairs for the operational queues |
+| Technician | `/me/today` for the current authenticated account, including links to assigned surveys, installations and repairs |
+| Warehouse | Every `/stock` and `/dispatches` page, using backend low-stock flags and actual dispatch statuses |
+
+Added `GET /api/v1/dashboard/trend?months=12` for director/admin. It uses independent SQL monthly aggregates, IST boundaries and Decimal strings; empty months are zero-filled. Bookings include GST and use confirmation dates; cash uses completed payment dates. Cancelled bookings and failed/pending/refunded payments are excluded from their respective series. Details are in `docs/api-changelog.md` and `docs/decisions.md`.
+
+Preserved the workspace card/chart/project/queue styling. Removed invented people, weather, JSA, DISCOM, capacity/fleet targets, project progress percentages and toast-only workspace actions. Guests and wrong-role accounts get a role-specific sign-in prompt without fetching that workspace's protected data.
+
+Final validation after a normal demo reset: ruff clean; pytest **258 passed**; frontend production build passed; full Playwright suite **51 passed** (4.7 minutes). Added tests compare every workspace KPI, project stage, approval count and chart month against the APIs, and cover role gating and failure/retry behavior. No schema migrations or db-requests changes were needed.

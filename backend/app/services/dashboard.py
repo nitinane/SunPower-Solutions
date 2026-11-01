@@ -3,12 +3,14 @@
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from app.core.dates import add_months, ist_day_start
 from app.exceptions import BusinessRuleViolation, NotFound
 from app.repositories import auth as audit_repo
 from app.repositories import dashboard as repo
-from app.schemas.dashboard import DashboardSummary, ShareRead
+from app.schemas.dashboard import DashboardSummary, DashboardTrendPoint, ShareRead
 from app.services.common import RequestMeta
 
 BUSINESS_TZ = ZoneInfo("Asia/Kolkata")
@@ -43,6 +45,22 @@ def summary(db, period, sort="recent"):
         unfinished_jobs=unfinished,
         open_repairs=repairs,
     )
+
+
+def trend(db, months):
+    end = _now()
+    current = end.astimezone(BUSINESS_TZ).date().replace(day=1)
+    first = add_months(current, 1 - months)
+    booked, received = repo.monthly_totals(db, ist_day_start(first), end)
+    zero = Decimal("0.00")
+    result = []
+    for offset in range(months):
+        month = add_months(first, offset).strftime("%Y-%m")
+        result.append(DashboardTrendPoint(
+            month=month, booked_order_value=booked.get(month, zero),
+            payments_received=received.get(month, zero),
+        ))
+    return result
 
 
 def create_share(db, data, *, actor, meta=None):

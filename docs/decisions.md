@@ -112,3 +112,8 @@ P3-2: Add frontend Node type definitions and a lockfile because the existing Vit
 Session length: default JWT expiry is 480 minutes to cover an eight-hour shift.
 
 - Frontend fonts: allow Google Fonts styles and font files in the main CSP because the application loads them from fonts.googleapis.com and fonts.gstatic.com.
+
+- Live workspaces: use the normal demo seed; dataset discovery, bulk import and the -Bulk reset switch were explicitly removed from scope by the user.
+- Dashboard trend: booked_order_value is the accepted quote total including GST, booked on order confirmed_at; cancelled and unconfirmed orders are excluded. payments_received counts all completed order/service payments by paid_at, matching the summary cash card. Months are Asia/Kolkata, including the current partial month through now, with zero-filled empty months; SQL aggregates bookings and cash independently to avoid duplicate order values.
+- Live workspaces: Owner shows month summary cards and recent active orders with their actual order status as stage; the approval queues use submitted surveys, planned installation jobs and open repairs. Technician uses the current session's /me/today. Warehouse reads every stock and dispatch page for exact low-stock and queue counts.
+- Live workspaces: remove unsupported weather, JSA, DISCOM, fleet/capacity targets, invented locations/personas, progress percentages and toast-only dashboard actions. SVG converts Decimal strings to numbers only for coordinates; displayed financial values retain exact strings and Indian digit grouping.
