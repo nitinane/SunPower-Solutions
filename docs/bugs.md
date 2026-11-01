@@ -213,7 +213,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (seen in check output; log `e2e/artifacts/log-a06-dispatch.json` from the first run)
 - Likely layer: frontend, `frontend/src/pages/warehouse/Dispatches.tsx`.
 - PDF requirement: R8
-- Status: open
+- Status: fixed in `fix(BUG-015): trim scan quantity decimal padding`
 
 ### BUG-016 [cosmetic] React warning on the Shared links form
 - Role / screen / URL: director / Shared links / `/director/sharing`

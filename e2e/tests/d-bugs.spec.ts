@@ -125,3 +125,12 @@ test('BUG-013 missing pay run is empty data without retries', async ({ page }) =
   await page.waitForTimeout(4000)
   expect(calls).toBe(1)
 })
+
+test('BUG-015 scan quantities have no decimal padding', async ({ page }) => {
+  await uiLogin(page, 'warehouse')
+  const list = await (await page.request.get('/api/v1/dispatches')).json()
+  const dispatch = list.items.find((d: any) => d.lines.some((line: any) => line.requires_serial))
+  await page.goto(`/warehouse/dispatches/${dispatch.id}`)
+  await expect(page.locator('[data-field]')).not.toContainText(/\/\d+\.000 scanned/)
+  await expect(page.locator('[data-field]')).toContainText(/\/\d+ scanned/)
+})
