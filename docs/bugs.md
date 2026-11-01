@@ -9,15 +9,27 @@
 - **Re-run:** reset demo data first (the chain uses a fixed phone number), then `cd e2e; npx playwright test`.
   Logs per test: `e2e/artifacts/log-*.json`; screenshots: `e2e/artifacts/*.png`.
 
+## Final verification (2026-11-01)
+
+- Code and regression checks: `7d286a7` on `frontend`.
+- Result: 17 fixed (including newly discovered BUG-018), 1 won't fix (BUG-010), 0 open.
+- Reset: `scripts/demo_reset.ps1` completed successfully immediately before the final full run.
+- Full e2e: `cd e2e; npx playwright test` -> **41 passed, 0 failed** (4.0 minutes), including the full demo chain, six role smoke tests, both mobile tests, focused regressions, and surveyor/admin login checks.
+- Backend: `docker compose exec -T api python -m pytest -q` -> **254 passed**; `ruff check app tests` -> clean.
+- Frontend: `npm run build` -> passed, including the clean Docker build during the final reset; Vite reports its existing large-chunk warning.
+- Test maintenance: warranty assertions now use product/serial labels; signature drawing scrolls the pad into view; technician assignment scopes its selector to the field form; the planned-job pytest follows pagination across shared test data.
+- New bug: BUG-018 was reproduced and fixed; no new open bugs remain from this run.
+- Evidence: `e2e/artifacts/report.json` and `e2e/artifacts/log-*.json` (local ignored test artifacts).
+
 ## Totals
 
 | Severity | Count |
 | --- | --- |
 | blocker | 2 |
-| major | 6 |
+| major | 7 |
 | minor | 6 |
 | cosmetic | 3 |
-| **total** | **17** |
+| **total** | **18** |
 
 ## Passed checks
 
@@ -71,7 +83,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a07-crew-calendar-assign-tech1-tech2-to-the-new-job-today.png
 - Likely layer: frontend, `frontend/src/pages/manager/ManagerPages.tsx` (`/orders?status=confirmed`). Should list jobs in `planned`/`scheduled`, or orders in confirmed/dispatched/delivered.
 - PDF requirement: R7
-- Status: fixed in `fix(BUG-001): list all planned installation jobs`
+- Status: fixed in b07f9f5
 
 ### BUG-002 [blocker] Opening an invoice crashes the Office page
 - Role / screen / URL: office / Invoices / `/office/invoices`
@@ -81,7 +93,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a11-invoice-invoices-list-contains-the-order-invoice-printable-view-open.png
 - Likely layer: contract mismatch. `frontend/src/pages/office/OfficePage.tsx` InvoicesTab (`{invoice.data.buyer.address}`) and the `Invoice` type in `frontend/src/api/sales.ts` vs `GET /api/v1/invoices/{id}`.
 - PDF requirement: R15
-- Status: fixed in `fix(BUG-002): render invoice address fields`
+- Status: fixed in 962b128
 
 ### BUG-003 [major] Customer search crashes the Customers page; Repairs search shows a blank customer
 - Role / screen / URL: office and support / Customers / `/customers`. Also office / Repairs / `/office/repairs`.
@@ -91,7 +103,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a02-office-inbox-customer-created-customers-search.png, e2e/artifacts/probe-office-repairs-search.png
 - Likely layer: contract mismatch. `frontend/src/pages/operations/OperationsPage.tsx` (CustomersModule), `frontend/src/pages/office/OfficePage.tsx` (RepairsTab), `searchSupport` / `getCustomerMatches` types. The `/support` screen (field contracts) uses `name` and works.
 - PDF requirement: R11
-- Status: fixed in `fix(BUG-003): match support search customer fields`
+- Status: fixed in fd6f0f2
 
 ### BUG-004 [major] Login sends manager, technician and warehouse users to the mock Owner dashboard
 - Role / screen / URL: manager, tech1, warehouse / Login / `/login`
@@ -101,7 +113,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a03-survey-submit-tech1-login-lands-on.png, e2e/artifacts/a06-dispatch-warehouse-login-lands-on.png, e2e/artifacts/a07-crew-calendar-manager-login-lands-on.png
 - Likely layer: frontend, `frontend/src/pages/operations/OperationsPage.tsx` LoginPage `roleHome`.
 - PDF requirement: R7, R10
-- Status: fixed in `fix(BUG-004): send staff to existing role routes`
+- Status: fixed in f1d7143
 
 ### BUG-005 [major] Field screens have no navigation and no sign-out
 - Role / screen / URL: tech1 `/technician/today`, `/technician/jobs/:id`, `/technician/surveys/:id`, `/technician/tickets/:id`; warehouse `/warehouse/dispatches`, `/warehouse/receiving`; manager `/manager/schedule`; support `/support/tickets/:id`
@@ -111,7 +123,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/b-tech1-smoke-tech1-technician-today-page-has-no-sidebar-navigation.png, e2e/artifacts/b-warehouse-smoke-warehouse-warehouse-dispatches-page-has-no-sidebar-navigatio.png, e2e/artifacts/b-manager-smoke-manager-manager-schedule-page-has-no-sidebar-navigation.png
 - Likely layer: frontend, `frontend/src/routes.field.tsx` (field routes are not wrapped in `StaffLayout`/`MobileLayout`).
 - PDF requirement: R10
-- Status: fixed in `fix(BUG-005): give field screens staff navigation and sign out`
+- Status: fixed in 23171dc
 
 ### BUG-006 [major] Installations page always fails with "Pick at most 62 days"
 - Role / screen / URL: office, manager, director / Installations / `/installations`
@@ -121,7 +133,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (no exception; see log `e2e/artifacts/log-b-office-smoke.json`)
 - Likely layer: frontend, `frontend/src/pages/operations/OperationsPage.tsx` InstallationsModule `istDate(-30)` / `istDate(60)`.
 - PDF requirement: R7
-- Status: fixed in `fix(BUG-006): use a valid default schedule range`
+- Status: fixed in 9542529
 
 ### BUG-007 [major] New share link is never shown, only copied to the clipboard
 - Role / screen / URL: director / Shared links / `/director/sharing`
@@ -131,7 +143,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a10-director-dashboard-new-share-link-is-visible-on-screen-not-only-copied-to-clipb.png
 - Likely layer: frontend, `frontend/src/pages/director/DirectorPage.tsx` Shares.
 - PDF requirement: R18
-- Status: fixed in `fix(BUG-007): retain share URLs when copying fails`
+- Status: fixed in 8ca8bb0
 
 ### BUG-008 [major] Public enquiry page and shared report page show the staff sidebar
 - Role / screen / URL: anonymous / `/public` and `/share/:token`
@@ -141,7 +153,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a10-director-dashboard-share-link-opens-read-only-without-login.png
 - Likely layer: frontend, `frontend/src/layouts/PublicLayout.tsx` (renders `SharedSidebar`).
 - PDF requirement: R18, R1
-- Status: fixed in `fix(BUG-008): remove staff layout from public pages`
+- Status: fixed in 6835553
 
 ### BUG-009 [minor] Sales inbox does not show the subsidy request
 - Role / screen / URL: office / Sales inbox / `/office/enquiries`
@@ -151,7 +163,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a02-office-inbox-inbox-card-shows-subsidy-request.png
 - Likely layer: frontend, `frontend/src/pages/office/OfficePage.tsx` EnquiriesTab card.
 - PDF requirement: R1
-- Status: fixed in `fix(BUG-009): show subsidy requests in the inbox`
+- Status: fixed in 1c51a32
 
 ### BUG-010 [minor] Survey form has no recommended system size field
 - Role / screen / URL: tech1 / Field survey / `/technician/surveys/8`
@@ -171,7 +183,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a05-quote-order-payment-pick-list-job-shown-readably-not-raw-json.png
 - Likely layer: frontend, `frontend/src/pages/office/OfficePage.tsx` (OrdersTab `JSON.stringify`, QuotesTab `window.alert`).
 - PDF requirement: R7, R6
-- Status: fixed in `fix(BUG-011): display readable order workflow references`
+- Status: fixed in 18fa44b
 
 ### BUG-012 [minor] Delivery warranty list shows unit ids, not products
 - Role / screen / URL: warehouse / Dispatch detail after delivery / `/warehouse/dispatches/6`
@@ -181,7 +193,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/a06-dispatch-warranty-list-names-the-product-not-only-unit-ids.png
 - Likely layer: frontend (+ contract: `WarrantyRead` has no product name/serial), `frontend/src/pages/warehouse/Dispatches.tsx`.
 - PDF requirement: R9
-- Status: fixed in `fix(BUG-012): label delivery warranties with product and serial`
+- Status: fixed in 937e53f
 
 ### BUG-013 [minor] My day logs a 404 on every load when there is no pay run
 - Role / screen / URL: tech1 / My day / `/technician/today`
@@ -191,7 +203,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (log `e2e/artifacts/log-b-tech1-smoke.json`)
 - Likely layer: contract mismatch. The backend uses 404 for "no data yet"; it could return 200 with `null`, or the frontend could skip the console noise.
 - PDF requirement: R17
-- Status: fixed in `fix(BUG-013): treat missing pay runs as empty data`
+- Status: fixed in b182aa7
 
 - Verification: the frontend maps the API's 404 to successful null data without retries or application error logging; Chromium's native network diagnostic remains an expected HTTP 404 in the e2e recorder.
 
@@ -203,7 +215,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: e2e/artifacts/c-tech1-mobile-tech1-technician-today-controls-smaller-than-40-px.png, e2e/artifacts/c-tech1-mobile-tech1-technician-jobs-6-controls-smaller-than-40-px.png, e2e/artifacts/c-warehouse-mobile-warehouse-warehouse-dispatches-controls-smaller-than-40-px.png, e2e/artifacts/c-warehouse-mobile-warehouse-inventory-controls-cut-off-at-right-edge.png
 - Likely layer: frontend, `frontend/src/pages/field/ui.tsx` (Page styles cover button/select only, not links/checkboxes) and OperationsPage inventory table.
 - PDF requirement: R10
-- Status: fixed in `fix(BUG-014): size mobile controls and stack inventory rows`
+- Status: fixed in 58b44a5
 
 ### BUG-015 [cosmetic] Dispatch scan counters show "1/1.000 scanned"
 - Role / screen / URL: warehouse / Dispatch detail / `/warehouse/dispatches/6`
@@ -213,7 +225,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (seen in check output; log `e2e/artifacts/log-a06-dispatch.json` from the first run)
 - Likely layer: frontend, `frontend/src/pages/warehouse/Dispatches.tsx`.
 - PDF requirement: R8
-- Status: fixed in `fix(BUG-015): trim scan quantity decimal padding`
+- Status: fixed in ac89495
 
 ### BUG-016 [cosmetic] React warning on the Shared links form
 - Role / screen / URL: director / Shared links / `/director/sharing`
@@ -223,7 +235,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (log `e2e/artifacts/log-b-director-smoke.json`)
 - Likely layer: frontend, `frontend/src/pages/director/DirectorPage.tsx` Shares.
 - PDF requirement: R18
-- Status: fixed in `fix(BUG-016): set share expiry on the select`
+- Status: fixed in 0238b68
 
 ### BUG-017 [cosmetic] Sidebar background stops partway down long pages
 - Role / screen / URL: office (any long staff page, e.g. `/office/quotes`)
@@ -233,7 +245,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: visible in e2e/artifacts/a05-quote-order-payment-pick-list-job-shown-readably-not-raw-json.png (full-page shot)
 - Likely layer: frontend, `frontend/src/styles.css` (`.shared-sidebar` height / sticky).
 - PDF requirement: —
-- Status: fixed in `fix(BUG-017): extend the sidebar background through long pages`
+- Status: fixed in 8c5d641
 
 ### BUG-018 [major] Surveyor login destination rejects the surveyor role
 - Role / screen / URL: surveyor / Profile / `/settings`
@@ -242,4 +254,4 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Actual: The settings route's role gate excludes surveyor, so the landing page says Access restricted.
 - Root cause: The profile route and Settings navigation omitted this authenticated staff role.
 - Verification: `e2e/tests/e-surveyor.spec.ts` reproduces the restriction and checks the corrected landing page; admin's remaining role destination is also checked.
-- Status: fixed in `fix(BUG-018): allow surveyors to open their profile destination`
+- Status: fixed in a66bebe
