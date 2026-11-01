@@ -1,3 +1,4 @@
+import { TopActions } from './components/TopActions'
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { SharedSidebar } from './components/SharedSidebar'
@@ -95,6 +96,6 @@ export function HomePage({ initialWorkspace = 'owner' }: { initialWorkspace?: Wo
   const [toast, setToast] = useState('')
   const meta = workspaceMeta[workspace]
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
-  return <div className="app-shell"><SharedSidebar /><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>SunPower OS</span><Icon>chevron_right</Icon><span className="active-workspace"><i style={{ backgroundColor: workspace === 'owner' ? '#57344f' : workspace === 'tech' ? '#00696e' : '#34451e' }} />Active Workspace: {workspace === 'owner' ? 'Owner' : workspace === 'tech' ? 'Technician' : 'Warehouse'}</span></div><div className="top-actions"><button onClick={() => notify('Barcode scanner opened')}><Icon>qr_code_scanner</Icon><span>Quick Scan</span></button><div className="capacity"><span>GRID CAPACITY</span><b>2.4 MW Active</b><Icon>bolt</Icon></div><button onClick={() => notify('You have 2 operational alerts')}><Icon>notifications</Icon><em /></button><button onClick={() => notify('ERP Help Guide opened')}><Icon>help</Icon></button><div className="user"><div><strong>{meta.user}</strong><small>{meta.role}</small></div><div className={`avatar ${workspace}`}><Icon>person</Icon></div></div></div></header>
+  return <div className="app-shell"><SharedSidebar /><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>SunPower OS</span><Icon>chevron_right</Icon><span className="active-workspace"><i style={{ backgroundColor: workspace === 'owner' ? '#57344f' : workspace === 'tech' ? '#00696e' : '#34451e' }} />Active Workspace: {workspace === 'owner' ? 'Owner' : workspace === 'tech' ? 'Technician' : 'Warehouse'}</span></div><TopActions /></header>
       <main><section className="workspace-banner"><div className="banner-title"><div className={`banner-icon ${workspace}`}><Icon>{meta.icon}</Icon></div><div><div className="heading-row"><h1>{meta.title}</h1><span className="tag purple">Active Scope</span></div><p>{meta.subtitle}</p></div></div></section>{workspace === 'owner' ? <OwnerDashboard notify={notify} /> : <SecondaryWorkspace workspace={workspace} notify={notify} />}</main>{toast && <div className="toast"><Icon>check_circle</Icon>{toast}</div>}</div></div>
 }

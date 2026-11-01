@@ -6,6 +6,8 @@ import zlib from 'node:zlib'
 
 export const BASE = process.env.E2E_BASE_URL || 'http://localhost:5173'
 export const PASSWORD = process.env.DEMO_PASSWORD || 'SunPower@2026'
+// Admin and surveyor are created by scripts.seed, rather than seed_demo.
+const passwordFor = (role: string) => ['admin', 'surveyor'].includes(role) ? process.env.SEED_PASSWORD || 'SunPower@2026' : PASSWORD
 export const ROOT = path.resolve(__dirname, '..')
 export const ART = path.join(__dirname, 'artifacts')
 const STATE = path.join(__dirname, 'state.json')
@@ -132,7 +134,7 @@ export class Run {
 export async function uiLogin(page: Page, role: Role): Promise<string> {
   await page.goto('/login')
   await page.getByLabel('Email').fill(email(role))
-  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByLabel('Password').fill(passwordFor(role))
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(u => !u.pathname.startsWith('/login'), { timeout: 15_000 })
   await page.waitForLoadState('networkidle').catch(() => {})
@@ -141,7 +143,7 @@ export async function uiLogin(page: Page, role: Role): Promise<string> {
 
 export async function apiAs(role: Role): Promise<APIRequestContext> {
   const ctx = await request.newContext({ baseURL: BASE })
-  const res = await ctx.post('/api/v1/auth/login', { data: { email: email(role), password: PASSWORD } })
+  const res = await ctx.post('/api/v1/auth/login', { data: { email: email(role), password: passwordFor(role) } })
   if (!res.ok()) throw new Error(`API login ${role} failed: ${res.status()} ${await res.text()}`)
   return ctx
 }

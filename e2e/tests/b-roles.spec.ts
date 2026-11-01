@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { Run, settle, type Role } from '../lib'
 
 // TEST B — every sidebar link and every tab per role. Demo workspaces (/, /technician, /warehouse)
@@ -45,7 +45,19 @@ for (const role of ROLES) {
     const nav = page.locator('aside[aria-label="Main navigation"]')
     if (!(await nav.count())) { await run.note(`${role}: no sidebar on landing page ${landing}`, 'Landing page has no navigation; collecting links from /', page); await page.goto('/'); await settle(page) }
     const links = [...new Set(await nav.locator('a[href]').evaluateAll(as => as.map(a => (a as HTMLAnchorElement).getAttribute('href')!)))]
+    const expected: Record<string, string[]> = {
+      director: ['/', '/director/overview', '/office/enquiries', '/warehouse/receiving', '/warehouse/dispatches', '/support', '/customers', '/installations', '/inventory', '/reports', '/settings'],
+      manager: ['/manager/schedule', '/installations', '/settings'],
+      office: ['/office/enquiries', '/support', '/customers', '/installations', '/inventory', '/settings'],
+      warehouse: ['/warehouse', '/warehouse/receiving', '/warehouse/dispatches', '/inventory', '/settings'],
+      tech1: ['/technician/today', '/settings'],
+      support: ['/support', '/customers', '/settings'],
+    }
+    const screens = await nav.locator('nav > div > div > a[href]').evaluateAll(as => as.map(a => a.getAttribute('href')!))
+    expect(screens.sort()).toEqual(expected[role].sort())
+    await expect(nav.getByRole('button', { name: 'AI Copilot' })).toHaveCount(0)
     run.checks.push({ name: `${role} sidebar links: ${links.join(' ')}`, ok: true })
+    const visitedTabAreas = new Set<string>()
     for (const href of links) {
       run.step = href
       await run.check(`${role} open ${href}`, page, async () => {
@@ -54,6 +66,9 @@ for (const role of ROLES) {
         await inspect(run, page, `${role} ${href}`, DEMO.has(href))
         if (!(await page.locator('aside[aria-label="Main navigation"]').count())) await run.note(`${role} ${href}: page has no sidebar/navigation`, `At ${path} the staff sidebar is missing, so the user cannot navigate or sign out`, page)
         if (DEMO.has(href)) return
+        const area = href.split('/')[1]
+        if (visitedTabAreas.has(area)) return
+        visitedTabAreas.add(area)
         const tabs = page.locator('nav.workflow-tabs button, nav.settings-nav button')
         const n = await tabs.count()
         for (let i = 0; i < n; i++) {
@@ -67,3 +82,20 @@ for (const role of ROLES) {
     await run.finish()
   })
 }
+
+
+test('guest sidebar and working top bar', async ({ page }) => {
+  await page.goto('/')
+  const nav = page.getByRole('complementary', { name: 'Main navigation' })
+  await expect(nav.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+  await expect(nav.getByRole('button', { name: 'Sign out', exact: true })).toHaveCount(0)
+  await expect(nav).not.toContainText('MY WORK')
+  await expect(nav).not.toContainText('OPERATIONS')
+  await expect(page.getByText('Please log in', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Notifications', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Operational notifications' })).toContainText('Sign in')
+  await page.getByRole('button', { name: 'Help', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Your screens' })).toBeVisible()
+  await nav.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL(/\/login$/)
+})

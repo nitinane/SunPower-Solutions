@@ -158,3 +158,8 @@ main { padding: 24px; }.workspace-banner,.panel,.kpi-card,.safety-card,.weather-
   .shared-layout, .shared-layout:has(> .shared-sidebar-collapsed) { --sidebar-column: 64px; }
 }
 @media print { .shared-layout { background: #fff; } }
+
+.top-panel-anchor { position: relative; }
+.top-popover { position: absolute; right: 0; top: 100%; z-index: 100; width: min(340px, 85vw); max-height: 65vh; overflow: auto; padding: 18px; background: white; color: #222; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 25px #0002; }
+.top-popover h2 { font-size: 16px; }
+.top-popover a { display: block; padding: 10px 0; color: #57344f; }

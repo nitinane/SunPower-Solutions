@@ -1,3 +1,4 @@
+import { routeRoles } from './navigation'
 import { useQuery } from '@tanstack/react-query'
 import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -34,15 +35,15 @@ export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/public', element: <PublicLayout />, children: [{ index: true, element: <PublicPage /> }] },
   { path: '/share/:token', element: <PublicLayout />, children: [{ index: true, element: <SharedDashboardPage /> }] },
-  { path: '/office', element: <ProtectedStaffLayout roles={['director', 'office']} />, children: [{ index: true, element: <Navigate to="enquiries" replace /> }, { path: ':tab', element: <OfficePage /> }] },
-  { path: '/director', element: <ProtectedStaffLayout roles={['director']} />, children: [{ index: true, element: <Navigate to="overview" replace /> }, { path: ':tab', element: <DirectorPage /> }] },
+  { path: '/office', element: <ProtectedStaffLayout roles={routeRoles['/office']} />, children: [{ index: true, element: <Navigate to="enquiries" replace /> }, { path: ':tab', element: <OfficePage /> }] },
+  { path: '/director', element: <ProtectedStaffLayout roles={routeRoles['/director']} />, children: [{ index: true, element: <Navigate to="overview" replace /> }, { path: ':tab', element: <DirectorPage /> }] },
   { element: <RoleGuard />, children: [
-    { path: '/support', element: <ProtectedStaffLayout roles={['director', 'support']} />, children: [{ index: true, element: <SupportPage /> }] },
-    { path: '/customers', element: <SessionGate roles={['director', 'office', 'support']}><OperationsPage module="customers" /></SessionGate> },
-    { path: '/installations', element: <SessionGate roles={['director', 'manager', 'office']}><OperationsPage module="installations" /></SessionGate> },
-    { path: '/inventory', element: <SessionGate roles={['director', 'office', 'warehouse']}><OperationsPage module="inventory" /></SessionGate> },
-    { path: '/reports', element: <SessionGate roles={['director']}><OperationsPage module="reports" /></SessionGate> },
-    { path: '/settings', element: <SessionGate roles={['director', 'manager', 'office', 'support', 'warehouse', 'surveyor']}><OperationsPage module="settings" /></SessionGate> },
+    { path: '/support', element: <ProtectedStaffLayout roles={routeRoles['/support']} />, children: [{ index: true, element: <SupportPage /> }] },
+    { path: '/customers', element: <SessionGate roles={routeRoles['/customers']}><OperationsPage module="customers" /></SessionGate> },
+    { path: '/installations', element: <SessionGate roles={routeRoles['/installations']}><OperationsPage module="installations" /></SessionGate> },
+    { path: '/inventory', element: <SessionGate roles={routeRoles['/inventory']}><OperationsPage module="inventory" /></SessionGate> },
+    { path: '/reports', element: <SessionGate roles={routeRoles['/reports']}><OperationsPage module="reports" /></SessionGate> },
+    { path: '/settings', element: <SessionGate roles={routeRoles['/settings']}><OperationsPage module="settings" /></SessionGate> },
   ] },
   ...fieldRoutes,
   { path: '*', element: <Navigate to="/" replace /> },
