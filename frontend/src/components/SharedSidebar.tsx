@@ -33,7 +33,7 @@ export function SharedSidebar() {
   if (canSee(role, ['office', 'manager'])) operations.push({ icon: 'wb_sunny', label: 'Installations', path: '/installations' })
   if (canSee(role, ['office', 'warehouse'])) operations.push({ icon: 'warehouse', label: 'Inventory', path: '/inventory' })
   if (canSee(role, ['director'])) operations.push({ icon: 'monitoring', label: 'Reports', path: '/reports' })
-  if (canSee(role, ['director', 'manager', 'office', 'support', 'warehouse'])) operations.push({ icon: 'settings', label: 'Settings', path: '/settings' })
+  if (canSee(role, ['director', 'manager', 'office', 'support', 'warehouse', 'surveyor'])) operations.push({ icon: 'settings', label: 'Settings', path: '/settings' })
   const selected = (item: NavItem) => item.path === '/' ? location.pathname === '/' : item.badge ? location.pathname === item.path : pathSelected(location.pathname, item.path)
   const renderItem = (item: NavItem) => <Link key={item.path} to={item.path} title={item.label} aria-label={item.label} aria-current={selected(item) ? 'page' : undefined} className={`shared-nav-button ${selected(item) ? 'selected' : ''}`}><Icon>{item.icon}</Icon><span className="shared-sidebar-text">{item.label}</span>{item.badge && <small className="shared-sidebar-text">{item.badge}</small>}</Link>
   return <aside className={`shared-sidebar ${collapsed ? 'shared-sidebar-collapsed' : ''}`} aria-label="Main navigation">

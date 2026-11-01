@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
     { path: '/installations', element: <SessionGate roles={['director', 'manager', 'office']}><OperationsPage module="installations" /></SessionGate> },
     { path: '/inventory', element: <SessionGate roles={['director', 'office', 'warehouse']}><OperationsPage module="inventory" /></SessionGate> },
     { path: '/reports', element: <SessionGate roles={['director']}><OperationsPage module="reports" /></SessionGate> },
-    { path: '/settings', element: <SessionGate roles={['director', 'manager', 'office', 'support', 'warehouse']}><OperationsPage module="settings" /></SessionGate> },
+    { path: '/settings', element: <SessionGate roles={['director', 'manager', 'office', 'support', 'warehouse', 'surveyor']}><OperationsPage module="settings" /></SessionGate> },
   ] },
   ...fieldRoutes,
   { path: '*', element: <Navigate to="/" replace /> },

@@ -234,3 +234,12 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Likely layer: frontend, `frontend/src/styles.css` (`.shared-sidebar` height / sticky).
 - PDF requirement: —
 - Status: fixed in `fix(BUG-017): extend the sidebar background through long pages`
+
+### BUG-018 [major] Surveyor login destination rejects the surveyor role
+- Role / screen / URL: surveyor / Profile / `/settings`
+- Steps: Sign in as surveyor@sunpower.in after correcting the login role destinations.
+- Expected: The profile destination opens with the authenticated surveyor's details and sign-out.
+- Actual: The settings route's role gate excludes surveyor, so the landing page says Access restricted.
+- Root cause: The profile route and Settings navigation omitted this authenticated staff role.
+- Verification: `e2e/tests/e-surveyor.spec.ts` reproduces the restriction and checks the corrected landing page; admin's remaining role destination is also checked.
+- Status: fixed in `fix(BUG-018): allow surveyors to open their profile destination`
