@@ -233,4 +233,4 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: visible in e2e/artifacts/a05-quote-order-payment-pick-list-job-shown-readably-not-raw-json.png (full-page shot)
 - Likely layer: frontend, `frontend/src/styles.css` (`.shared-sidebar` height / sticky).
 - PDF requirement: —
-- Status: open
+- Status: fixed in `fix(BUG-017): extend the sidebar background through long pages`

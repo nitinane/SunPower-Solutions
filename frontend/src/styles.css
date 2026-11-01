@@ -150,3 +150,11 @@ main { padding: 24px; }.workspace-banner,.panel,.kpi-card,.safety-card,.weather-
   .inventory-content .ops-table td { border: 0; padding: 8px 12px; overflow-wrap: anywhere; }
   .inventory-content .ops-table td::before { content: attr(data-label); display: block; color: #788890; font-size: 11px; margin-bottom: 4px; }
 }
+
+/* Continue the fixed navigation column through full-page captures and long content. */
+.shared-layout { --sidebar-column: 240px; background: linear-gradient(to right, #fff var(--sidebar-column), #f7f7f9 var(--sidebar-column)); }
+.shared-layout:has(> .shared-sidebar-collapsed) { --sidebar-column: 72px; }
+@media (max-width: 650px) {
+  .shared-layout, .shared-layout:has(> .shared-sidebar-collapsed) { --sidebar-column: 64px; }
+}
+@media print { .shared-layout { background: #fff; } }

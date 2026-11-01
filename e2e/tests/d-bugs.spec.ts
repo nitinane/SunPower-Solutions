@@ -142,3 +142,17 @@ test('BUG-016 share expiry uses a default value without React warning', async ({
   await expect(page.getByLabel('Expires after')).toHaveValue('72')
   expect(warnings).toEqual([])
 })
+
+test('BUG-017 sidebar covers a long page after scrolling', async ({ page }) => {
+  await openAs(page, 'office', '/office/quotes')
+  await page.locator('.record-card .text-button').first().click()
+  await expect(page.locator('.print-sheet')).toBeVisible()
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  const layout = await page.locator('.shared-sidebar').evaluate(el => {
+    const rect = el.getBoundingClientRect()
+    return { top: rect.top, bottom: rect.bottom, viewport: innerHeight, background: getComputedStyle(el.closest('.shared-layout')!).backgroundImage }
+  })
+  expect(layout.top).toBeLessThanOrEqual(0)
+  expect(layout.bottom).toBeGreaterThanOrEqual(layout.viewport)
+  expect(layout.background).toContain('linear-gradient')
+})
