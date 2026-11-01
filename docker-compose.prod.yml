@@ -1,0 +1,28 @@
+services:
+  web:
+    ports: !reset []
+  api:
+    volumes: !override ["uploaded_files:/app/storage"]
+    environment:
+      ENVIRONMENT: production
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+    restart: unless-stopped
+  db:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  caddy:
+    image: caddy:2.8.4
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+    restart: unless-stopped
+volumes:
+  uploaded_files:
+  caddy_data:
+  caddy_config:

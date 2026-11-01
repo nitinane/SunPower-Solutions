@@ -1,0 +1,114 @@
+# Decisions
+
+- payments.kind: maps to existing `payment_type` (advance/full/balance already in PaymentType) because same meaning.
+- payments.reference: maps to `reference_number`; made UNIQUE via partial index (WHERE NOT NULL) because cash has no reference.
+- payments.received_by: maps to `recorded_by` because same meaning.
+- orders "waiting-for-payment": maps to `OrderStatus.PENDING_PAYMENT` because same meaning; confirmed/dispatched/cancelled already existed.
+- dispatch PICK: maps to `DispatchStatus.DRAFT` (server default) because it is the pick-list stage; `packed` stays unused.
+- serialized_units serial: maps to `serial_number`; existing index made unique instead of adding a second index because one unique index covers both.
+- serial "shipped": maps to `SerialUnitStatus.DISPATCHED` because same meaning.
+- inventory quantity >= 0: maps to `quantity_on_hand` CHECK because already there.
+- stock_movements: quantity -> `quantity_delta`, created_by -> `performed_by`, type in/out -> `reason` purchase/dispatch; added `service` value because no existing reason meant a service-ticket part.
+- products.requires_serial: maps to `tracks_serial` because same meaning.
+- support ticket: number -> `ticket_number`, serialized_unit_id -> `faulty_serial_unit_id`, description -> `issue_description`, is_under_warranty -> `under_warranty`, customer_confirmed_by_name -> `confirmed_by_name`, closed_at -> `customer_confirmed_at` because CLOSED means "customer confirmed it works".
+- support ticket money columns: added with spec names (`parts_subtotal`, `labour_amount`, `gst`, `total`) NUMERIC(12,2) default 0 because none existed.
+- ticket parts lines: map to `ticket_charges` rows with `charge_type='part'`; qty -> `quantity`, unit_price snapshot -> `customer_price` because the table already stores per-ticket part lines.
+- dashboard_share_links.period: plain VARCHAR(20) without enum CHECK because no period enum exists yet.
+- tests/test_model_registry.py: added `dashboard_share_links` to EXPECTED_TABLES because the spec adds that table and the test lists every table.
+- compose: ran db with a scratch override `ports: !reset []` because host port 5432 is used by another project; repo compose files unchanged.
+- quotes notes: stored in `quotes.terms` because quotes has no notes column and terms is the free-text field shown on the quote.
+- quote reject reason: kept only in the `quote.rejected` audit entry (`new_data.reason`) because quotes has no reason column.
+- quote/order number: inserted with a temporary unique value, then set to `QT-{id:06d}` / `ORD-{id:06d}` in the same transaction because the column is NOT NULL and the pattern needs the id (same pattern as ENQ-{id:06d}).
+- quote line_total: qty x unit_price before GST, plus a separate `gst_amount` per line, because the spec computes GST per line and sums the quantized lines.
+- solar_packages.base_price: seeded as the sum of component sale prices (preview only; quotes always snapshot live product prices) because the column is NOT NULL.
+- GET /packages lives in the catalog router without a /catalog prefix because the spec path is /packages; price preview logic sits in services/catalog.py so the router does no DB work.
+- quote accept: sets the enquiry to `converted` (+ `enquiry.converted` audit) because P1-1 asks for it (replaces the earlier "no change" decision).
+- 409 codes: SURVEY_NOT_APPROVED, PACKAGE_NOT_AVAILABLE, QUOTE_STATUS_INVALID, ORDER_ALREADY_EXISTS.
+- P1-1 installation job: uses `planned` with `scheduled_at=NULL` because it is the existing unscheduled state; pick lists use `draft` and `DSP-{id:06d}`.
+- P1-1 idempotency: reject a key belonging to another order with `IDEMPOTENCY_KEY_REUSED` because replay must never mix payment and order records.
+- P1-2 service lines: show installation services in dispatch detail but exclude them from stock seeding, stock deductions, and stock movements because service products are never stocked.
+- P1-2 warranties: use the product's current `warranty_months` at delivery because the task explicitly specifies product warranty duration; start dates use the delivery timestamp in Asia/Kolkata.
+- P1-2 seed stock: insert missing rows only, preserving existing balances and serial statuses, because rerunning the seed must not replenish sold stock.
+- P1-2 delivery: also moves the order to `delivered` with an audit entry because subsequent installation and invoice workflows depend on delivery state.
+- P1-3 repair parts (`/resolve`) stay non-serialized stock products; serialized units are swapped with `POST /tickets/{id}/replace-unit` (P2-4) because a swap needs its own warranty and serial workflow.
+- P1-3 warranty charges store customer_price=0, while retaining quantities, hours and internal part costs, because the existing warranty_covered_no_customer_charge CHECK requires zero customer prices. Billable prices and GST rates are snapshotted in the resolution audit.
+- P1-3 reopened repairs retain previous charges and add each subsequent visit's parts, hours and totals because stock already consumed and work already done must not disappear; total labour hours are limited to the existing NUMERIC(5,2) column.
+- P1-3 dashboard reports from IST period start to now; unfinished installation and open repair queues span all periods because unresolved work must remain visible. Installed/completed/cancelled orders are excluded from unfinished installations.
+- P1-3 share creation returns its id alongside url and expires_at because the director needs that id to revoke the link; raw tokens are never stored or audited.
+- P1-3 support units without an active, non-voided warranty show expired with zero days_left (warranty_end may be null) because the API allows only active/expired coverage labels.
+
+P3-2: Retain the existing Compose service name web; Caddy proxies to web:80 because it already hosts Nginx.
+P3-2: ENVIRONMENT takes precedence over legacy ENV; production disables CORS and development permits only localhost:5173.
+P3-2: Upgrade FastAPI to permit patched Starlette 1.3.1; pin PyJWT 2.14.0 and python-multipart 0.0.30 to fix high/critical advisories, retaining medium/low findings per task scope.
+P3-2: Add frontend Node type definitions and a lockfile because the existing Vite configuration uses process and production requires npm ci.
+- installation job statuses: spec UNSCHEDULED -> `planned` (server default), SCHEDULED / IN_PROGRESS / COMPLETED -> same names, because same meaning.
+- installation_jobs.scheduled_date: stored in `scheduled_at` as 00:00 Asia/Kolkata of that date because the column exists and GET /orders already reads it as an IST date; no second date column.
+- installation_jobs: finished_at -> `completed_at`, system_kw -> `installed_capacity_kw`, signer_name -> `signed_by_name` (+ `signed_at`) because same meaning.
+- job_technicians: user_id -> `technician_id`, hours -> `hours_worked` NUMERIC(7,2), hourly_cost -> `hourly_rate` snapshot because same meaning; a technician with no hourly_rate is booked at 0.00 because the column is NOT NULL.
+- installation_evidence: kind -> `evidence_type`, size_bytes -> `file_size_bytes` because same meaning.
+- storage: added `save_bytes(content, ext)` / `open_bytes(key)` to app/storage/file_storage.py (keys `yyyy/mm/<uuid4>.<ext>`) because the old `save_file` uses the upload's filename and Content-Type header, which the spec forbids; `save_file` left untouched.
+- double booking: technician user rows are locked FOR UPDATE (id order) while checking because two parallel bookings on different jobs would otherwise both pass.
+- complete: order -> `completed` when already fully paid, else `installed`, because enums.py defines completed = installed + fully paid.
+- GET /installation-jobs/{id} crew shows name + hours, not hourly rate, because technicians can open it and rates are cost data.
+- GET /schedule returns Page[ScheduleRow] (default page_size 50, range max 62 days) because list endpoints use Page.
+- signature_png_base64 may carry a `data:image/png;base64,` prefix (stripped) because canvas.toDataURL() produces it.
+- 409 codes: JOB_NOT_SCHEDULABLE, TECHNICIAN_DOUBLE_BOOKED, JOB_STATUS_INVALID, MATERIAL_NOT_DELIVERED, PHOTO_LIMIT_REACHED, PHOTO_REQUIRED; 413 FILE_TOO_LARGE; 422 FILE_TYPE_NOT_ALLOWED, SIGNATURE_INVALID.
+- invoices schema: added the missing columns/table in migration `c974fad1ffda` (we own the schema now); existing columns mapped by meaning (taxable_amount -> `subtotal`, gst -> `tax_total`, invoice_date -> `issued_on`, invoice_lines -> `invoice_items`).
+- invoice_date: the IST date the invoice is created (delivery or ticket close), not a back-dated `delivered_at`, because gapless numbers must run in date order.
+- invoice status: always `issued` on creation because invoices never change; the other InvoiceStatus values stay unused.
+- order invoice totals: computed from the order lines and checked against the quote snapshot; a mismatch raises (500 + rollback) instead of printing a wrong invoice.
+- CGST/SGST: cgst = (gst / 2) rounded half-up, sgst = gst - cgst (101.01 -> 50.51 + 50.50); state match is case-insensitive and trimmed.
+- ticket_charges.gst_rate: new snapshot column filled at resolve; older rows fall back to the product's GST % (parts) or SERVICE_LABOUR_GST_PERCENT (labour).
+- service invoice: created in confirm only when the ticket closes, `under_warranty` is false and `total > 0`.
+- buyer block on the printout reads the customer and site live (no snapshot columns) because no endpoint edits customers or sites yet; place of supply is snapshotted on the invoice.
+- customers.gstin: new nullable column so the buyer GSTIN can print "if any"; no endpoint sets it yet.
+- POST /orders/{id}/invoice: allowed when the order is delivered, installed or completed (all are "after delivery"); returns 201 when created, 200 when it already existed.
+- COMPANY_GSTIN default is a placeholder (`36AAAAA0000A1Z5`) and must be replaced in production `.env`.
+- 409 code: ORDER_NOT_DELIVERED.
+- subsidy statuses: DOCUMENTS_PENDING -> `draft`, APPLIED -> `submitted`, INSPECTED -> `under_review`, SANCTIONED -> `approved`, DISBURSED -> `paid`, REJECTED -> `rejected` because same meaning; `documents_collected` unused. The API `to_status` takes these DB names.
+- subsidy sanctioned_amount: stored in existing `approved_amount`; the old "approved <= requested" CHECK was dropped because the requested amount is unknown (defaults to 0) and the government sets the sanctioned figure.
+- subsidy scheme_name (NOT NULL): fixed "Rooftop solar subsidy" because the spec has one scheme.
+- subsidy documents: new `subsidy_documents` table instead of the old `documents` JSONB because the spec wants one row per document with a UNIQUE pair; uploading a file also marks it received.
+- subsidy days_in_status: counted from the step date (applied_on / inspected_on / ...), `created_at` for draft and `updated_at` for rejected, because there is no status-changed column.
+- subsidy advance: `date` may not be in the future; REJECTED allowed from any step before paid (not from rejected); document changes blocked (409 SUBSIDY_CLOSED) once paid or rejected; duplicate application number -> 409 APPLICATION_NUMBER_TAKEN.
+- subsidy file upload: 5 MB, JPEG/PNG/WEBP/PDF by magic bytes, random storage key (same as installation photos); no download endpoint because the spec lists none.
+- pay run status: draft -> `PayoutStatus.PENDING`, paid -> `PAID` because same meaning.
+- repair pay: summed from `ticket_charges` labour rows (one per resolved visit, written at resolve time) by the ticket `assigned_to`, because `support_tickets.labour_hours` is cumulative across reopened visits and would pay a reopened ticket twice.
+- pay lines also store `install_amount` / `repair_amount`; `rate` = the technician current hourly rate (repairs); install amounts use each job row snapshot rate, rounded per row.
+- POST /pay-runs returns 201 when created, 200 when a draft is recalculated; GET /me/pay -> 404 when no run exists for that month, `line: null` when the technician has nothing in it.
+- 409 codes: INVALID_SUBSIDY_STEP, DOCUMENTS_MISSING, INSTALLATION_NOT_COMPLETED, SUBSIDY_EXISTS, SUBSIDY_CLOSED, APPLICATION_NUMBER_TAKEN, PAY_RUN_LOCKED.
+- P2-4 schema: new `stock_receipts` + `stock_receipt_lines` and `warranties.replaced_by_warranty_id` (migration `58b329724842`); spec `ticket_charges.serialized_unit_id` -> existing `replacement_unit_id`, `unit_cost` -> existing `cost_amount` (total cost to us, qty x unit cost, same as /resolve).
+- P2-4 serial "returned faulty": maps to `SerialUnitStatus.RETURNED`; the new unit gets `dispatched` because delivery leaves units in that status.
+- P2-4 products.cost_price: set to each receipt line's unit_cost (latest purchase cost) because quotes snapshot cost at quote time and later material cost should follow what we pay now.
+- P2-4 stock movement type in -> `reason=purchase`, reference_type `stock_receipt`; serialized products keep no inventory row (on hand = units in_stock), same as dispatch.
+- P2-4 GET /stock: low_stock below 5 (serial) / 50 (other) because products has no reorder_level; service products and inactive products are left out; returns Page[StockRow].
+- P2-4 receipts: received_on may not be in the future; duplicate serials in one request -> 422 validation_error; a serial on a non-serial product -> 422.
+- P2-4 replacement: the new warranty and unit are linked to the original order line (warranties need order_id/order_item_id); support search, ticket creation and the unit list find replacement units through that warranty; returned units are hidden from the customer's unit list.
+- P2-4 replacement under warranty: end_date = old end_date, or today if the warranty ran out after the ticket opened (coverage is frozen at opening, and end >= start is a CHECK).
+- P2-4 replacement out of warranty: old warranty is not marked replaced (it already ended); a product with warranty_months 0 still gets a 0-day warranty row so the unit stays traceable to the customer.
+- P2-4 dashboard warranty_service_cost: under-warranty tickets linked by `warranty_id -> warranties.order_id`; labour = cumulative `labour_hours` x the assigned technician's current `hourly_rate` (no snapshot exists); cancelled tickets still count because the cost was incurred.
+- P2-4 stock_purchases card: receipts whose `received_on` (IST business date) falls from the period start to today.
+- 409 codes: SERIAL_EXISTS, SERIAL_NOT_IN_STOCK, SERIAL_WRONG_PRODUCT, NO_SERIAL_UNIT, UNIT_ALREADY_REPLACED; 422 SERIAL_COUNT_MISMATCH; 404 SERIAL_NOT_FOUND.
+- P3-1 test database: `<db name>_test`, or the URL's own name if it already ends in `_test` (CI's `sunpower_test`), because CI already gives tests a dedicated database.
+- P3-1 test seed: users use the dev default password (tests never log in with it), catalog + stock from scripts/seed.py; tables are truncated once per test session, not per test, because tests already create their own unique data.
+- P3-1 rule coverage: all 14 listed rules already had tests (test_quotes, test_orders_payments, test_dispatch, test_tickets, test_dashboard, test_invoices, test_installations, test_route_protection), so no new rule tests were added.
+- P3-1 alembic.ini: `path_separator = os` added to silence Alembic's deprecation warning when tests run migrations in-process.
+- P3-1 demo seed: lives in backend/scripts/seed_demo.py (run as `python -m scripts.seed_demo`) because it imports the app's services; demo_reset.ps1 lives in a new repo-root scripts/ folder because it drives docker compose from the root.
+- P3-1 demo logins: seed_demo creates manager@ and tech3@ and sets DEMO_PASSWORD on the 8 role logins (director, manager, office, warehouse, tech1-3, support); falls back to the seed default outside production, refuses in production.
+- P3-1 demo surveys: done by tech3 (technicians are allowed surveyors) and approved by the manager because a surveyor cannot approve their own survey.
+- P3-1 demo backdating: "installed 3 years ago" moves enquiry, order, payment, dispatch and job timestamps back 3 x 365 days and re-dates its warranties from the moved delivery date; its order invoice keeps today's date because gapless invoice numbers must run in date order.
+- P3-1 demo pay run: the closed paid repair's charge rows are dated the 15th of last month, so last month's draft pay run has a real repair line.
+- P3-1 demo reset: dev compose files by default (`-Prod` / `COMPOSE=...` for the server); `docker compose up --wait` waits for healthchecks. It runs `down -v`, so it wipes the database and named volumes.
+- P3-1 load test: k6 targets the API port directly (BASE_URL), because the dev stack does not run Nginx; the search serial defaults to INV-3K-0001, Ravi Kumar (demo)'s inverter after a fresh demo reset.
+
+- P3-3 demo: document Swagger at `/api/docs` as the working presentation because the checked-in role screens and RoleGuard are placeholders; do not invent frontend buttons or a deployed URL.
+- P3-3 diagrams: derive core relationships from SQLAlchemy metadata foreign keys and unique constraints, omitting auxiliary tables for readability.
+- P3-3 fresh clone: use an independent local Git clone and base Compose project `sunpower_fresh`, then restore the original containers with start because their dev configuration has an external no-port override.
+- P3-3 Swagger: allow jsDelivr assets and the inline initializer only at exact `/api/docs` because the inherited self-only CSP blocked the required API demo; retain security headers and the main application's policy.
+- AUDIT dashboard: advance_payments counts completed advance-type payments by paid_at; technician_hours counts crew person-hours by installation completed_at plus repair labour-charge quantities by created_at, because cash receipts and performed work belong to their own IST reporting periods rather than the order-confirmation date.
+- AUDIT users: allow manager on the existing active-employee dropdown because managers schedule crews and assign repair visits; keep the same UserBrief fields without rates or purchase costs.
+- AUDIT evidence: DONE means the core backend rule has a passing test, while mobile/customer installation acceptance, printable/sendable invoices and verified live deployment remain PARTIAL because backend JSON/tests alone do not prove those user-facing outcomes.
+
+Session length: default JWT expiry is 480 minutes to cover an eight-hour shift.
+
+- Frontend fonts: allow Google Fonts styles and font files in the main CSP because the application loads them from fonts.googleapis.com and fonts.gstatic.com.

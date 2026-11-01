@@ -1,0 +1,12 @@
+{
+  "name": "sunpower-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright click-through of the SunPower demo chain, role smoke and mobile checks",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}

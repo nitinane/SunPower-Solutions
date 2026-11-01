@@ -1,0 +1,2 @@
+/** subsidies API stub. */
+export {}

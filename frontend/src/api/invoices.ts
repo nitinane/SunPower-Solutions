@@ -1,0 +1,2 @@
+/** invoices API stub. */
+export {}

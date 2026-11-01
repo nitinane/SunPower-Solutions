@@ -1,0 +1,381 @@
+# API changelog (for the frontend)
+
+All paths are under `/api/v1`. Auth is the session cookie. `admin` is always allowed in addition to the listed roles.
+Money fields are JSON strings (e.g. `"12345.00"`). Errors: `{"error": {"code", "message", "fields"}}`.
+Common errors on every endpoint: 401 `unauthorized` (not logged in), 403 `forbidden` (wrong role), 422 `validation_error`.
+
+## P1-1
+
+All paths below use `/api/v1`; admin is also allowed. Money is sent as decimal strings.
+
+### Shapes
+- `PaymentRead`: `id`, `order_id`, `amount`, `kind` (`advance|full|balance`), `method`, `reference` (nullable), `paid_at`, `received_by` (nullable user id), `created_at`.
+- `OrderSummary`: `id`, `order_number`, `status`, `customer_name`, `customer_phone`, `total`, `amount_paid`, `balance_due`, `created_at`.
+- `OrderRead`: `id`, `order_number`, `quote_id`, `status`, `customer {id,name,phone,email}`, `site {id,address_line1,address_line2,city,state,pincode}`, `items [{id,product_id,sku,name,qty,unit_price,line_total,requires_serial}]`, `subtotal`, `gst`, `total`, `amount_paid`, `balance_due`, `payments: PaymentRead[]`, `pick_list {id,status}|null`, `installation_job {id,status,scheduled_date}|null`, `confirmed_at`, `created_at`, `updated_at`. Line totals exclude GST. Paid and balance amounts use SQL SUM. Initial pick list status is `draft`; initial installation job status is `planned`, with null scheduled date.
+
+### POST /orders/{order_id}/payments
+- Roles: office, director.
+- Optional header: `Idempotency-Key` (max 100 characters); reuse returns the existing payment with 200.
+- Body: `{amount: positive Decimal (max 2 decimal places), method: PaymentMethod, reference?: string|null, paid_at?: datetime|null}`. Reference required for every method except cash; paid_at defaults to now. Client cannot set kind.
+- Response 201 (200 for replay): `{payment: PaymentRead, order: OrderRead}`. First payment confirms order and creates one pick list and one unscheduled installation job atomically. Later payments create neither.
+- Errors: 404 `not_found`; 409 `ORDER_NOT_PAYABLE`, `OVERPAYMENT`, `DUPLICATE_PAYMENT_REFERENCE`, `IDEMPOTENCY_KEY_REUSED` (key belongs to another order); 422 `validation_error`.
+
+### GET /orders
+- Roles: office, manager, director. No body.
+- Query: optional `status`, `search` (order number/customer name/phone), `page=1`, `page_size=20` (max 100).
+- Response 200: `Page[OrderSummary]` with newest orders first. Common errors only.
+
+### GET /orders/{order_id}
+- Roles: office, manager, warehouse, director. No body.
+- Response 200: `OrderRead`. Error: 404 `not_found`, plus common errors.
+
+### POST /enquiries/{enquiry_id}/qualification (changed)
+- Roles: office, director (existing).
+- Body: `{outcome: qualified|unqualified|contacted, shadow_free_roof_area_sqft?: Decimal|null, monthly_bill_amount?: Decimal|null, grid_connection_suitable?: bool|null, notes?: string|null}`. When outcome is qualified, all three call checks are required; missing values return 422 with an entry in `error.fields` for each missing check. Zero bill and false suitability count as supplied; suitability must still be true to qualify.
+- Response 200: existing `EnquiryRead`, including status and call checks. Existing 404 `not_found`, 409 `business_rule_violation`, and common errors remain.
+
+### POST /quotes/{quote_id}/accept (changed)
+- Roles: office, director. No body.
+- Response 200 unchanged: `{quote: QuoteRead, order_id}`. Also sets enquiry status to `converted` and records `enquiry.converted` in the same transaction.
+- Errors unchanged: 404 `not_found`; 409 `ORDER_ALREADY_EXISTS`, `QUOTE_STATUS_INVALID`; common errors.
+
+## P1-0
+
+### Shared shapes
+- `PriceLine`: `product_id`, `sku`, `name`, `category` (nullable), `qty`, `unit_price`, `gst_percent`, `line_total` (qty x unit_price, before GST), `gst_amount`.
+- `QuoteRead` (printable quote): `id`, `quote_number` (`QT-000001`), `enquiry_id`, `survey_id`, `package_id`, `status` (`draft|sent|accepted|rejected|expired|cancelled`), `customer {id, name, phone, email}`, `site {id, address_line1, address_line2, city, state, pincode}`, `lines: PriceLine[]`, `subtotal`, `gst`, `total`, `notes`, `valid_until` (date), `created_at`, `updated_at`.
+- `QuoteSummary` (list row): `id`, `quote_number`, `enquiry_id`, `survey_id`, `package_id`, `status`, `subtotal`, `gst`, `total`, `created_at`, `updated_at`.
+- `Page[T]`: `items`, `total`, `page`, `page_size`.
+
+### GET /packages
+- Roles: office, director.
+- Query: `package_type` (optional, PackageType), `kw` (optional, 0 < kw <= 100).
+- Response 200: `PackageRead[]` — `id`, `name`, `package_type`, `kw`, `is_active`, `components: PriceLine[]`, `subtotal`, `gst`, `total` (price preview from live product prices).
+
+### POST /quotes
+- Roles: office, director.
+- Body: `{"survey_id": int, "package_id": int, "include_installation": bool = false, "notes": string|null (max 5000)}`.
+- Response 201: `QuoteRead` (status `draft`, lines copied from the package with frozen prices).
+- Errors: 404 `not_found` (survey), 409 `SURVEY_NOT_APPROVED`, 409 `PACKAGE_NOT_AVAILABLE` (package inactive/missing, or installation service unavailable).
+
+### GET /quotes
+- Roles: office, director.
+- Query: `status` (optional), `enquiry_id` (optional), `page` (default 1), `page_size` (default 20, max 100).
+- Response 200: `Page[QuoteSummary]`.
+
+### GET /quotes/{quote_id}
+- Roles: office, director.
+- Response 200: `QuoteRead`. Errors: 404 `not_found`.
+
+### POST /quotes/{quote_id}/send
+- Roles: office, director. No body. `draft -> sent`.
+- Response 200: `QuoteRead`. Errors: 404 `not_found`, 409 `QUOTE_STATUS_INVALID`.
+
+### POST /quotes/{quote_id}/accept
+- Roles: office, director. No body. `sent -> accepted`, creates the order (status `pending_payment`).
+- Response 200: `{"quote": QuoteRead, "order_id": int}`.
+- Errors: 404 `not_found`, 409 `QUOTE_STATUS_INVALID`, 409 `ORDER_ALREADY_EXISTS`.
+
+### POST /quotes/{quote_id}/reject
+- Roles: office, director. Body: `{"reason": string (3–500)}`. `sent -> rejected`.
+- Response 200: `QuoteRead`. Errors: 404 `not_found`, 409 `QUOTE_STATUS_INVALID`.
+
+## P1-2
+
+All endpoints below use `/api/v1` and allow warehouse, director, and admin. Errors use the existing error envelope. Common errors: 401 `unauthorized`, 403 `forbidden`, 404 `not_found` for missing dispatch/item, 422 `validation_error`.
+
+### Shapes
+- `DispatchRead`: `id`, `dispatch_number`, `order_id`, `order_number`, `customer {id,name,phone,email}`, `site {id,address_line1,address_line2,city,state,pincode}`, `status`, `lines`, `dispatched_at`, `delivered_at`, `receiver_name`, `created_at`.
+- Each line: `{order_item_id,sku,name,qty,requires_serial,scanned,serials:[{dispatch_item_id,serialized_unit_id,serial}]}`. `qty` is a decimal string; `scanned` is an integer count of scanned units. Non-serial/service lines have no serial scans. Use `dispatch_item_id` to undo a scan.
+- Dispatch status flow: `draft` (pick list) -> `dispatched` -> `delivered`.
+- `WarrantyRead`: `{id,order_id,order_item_id,product_id,serialized_unit_id,quantity,start_date,end_date}`. Quantity is a decimal string, dates are ISO dates; serialized_unit_id is null for bulk warranties.
+
+### GET /dispatches
+- No body. Query: optional `status`, `page=1`, `page_size=20` (max 100).
+- Response 200: `Page[DispatchRead]`, oldest first. Common errors only.
+
+### GET /dispatches/{id}
+- No body. Response 200: `DispatchRead`. Common errors only.
+
+### POST /dispatches/{id}/scan
+- Body: `{serial: string}`. Spaces are removed and letters uppercased. Repeated scan on the same dispatch returns 200 with unchanged scans.
+- Response 200: `DispatchRead` with updated lines.
+- Errors: 404 `SERIAL_NOT_FOUND`; 409 `DISPATCH_LOCKED`, `SERIAL_WRONG_PRODUCT`, `LINE_ALREADY_COMPLETE`, `SERIAL_ALREADY_SHIPPED`, `SERIAL_NOT_IN_STOCK`; common errors.
+
+### DELETE /dispatches/{id}/scan/{dispatch_item_id}
+- No body. Draft dispatch only. Response 200: updated `DispatchRead`.
+- Errors: 409 `DISPATCH_LOCKED`; common errors (404 if the scan does not belong to this dispatch).
+
+### POST /dispatches/{id}/send
+- No body. Response 200: `DispatchRead` with status `dispatched`; order also becomes `dispatched`.
+- Requires all serial lines scanned and enough available non-serial stock. Deducts stock and records movements atomically; service lines consume no stock.
+- Errors: 409 `DISPATCH_LOCKED`, `SCAN_INCOMPLETE` (message lists missing lines/counts), `INSUFFICIENT_STOCK` (names product), `SERIAL_ALREADY_SHIPPED`, `SERIAL_NOT_IN_STOCK`; common errors.
+
+### POST /dispatches/{id}/deliver
+- Body: `{receiver_name: string, delivered_at?: timezone-aware datetime|null}`. Defaults to now; blank receiver names and timezone-free timestamps return 422.
+- Response 200: all `DispatchRead` fields plus `{warranties_created: integer, warranties: WarrantyRead[]}`. Order becomes `delivered`.
+- Atomically creates one warranty per scanned serialized unit, or one per non-serial order line, for products with warranty_months > 0. Warranty dates start on the Asia/Kolkata delivery date; expiry adds calendar months and clamps to month end.
+- Errors: 409 `ALREADY_DELIVERED`, `DISPATCH_LOCKED` (not dispatched); common errors.
+
+## P1-3
+
+All paths use `/api/v1`. Admin is allowed in addition to the roles below. Common errors on protected endpoints: 401 `unauthorized`, 403 `forbidden`, 404 `not_found` for missing records, 422 `validation_error`. Money is sent as strings. Dates are ISO dates; timestamps are UTC. Ticket lists use `Page[TicketRead]` (`items,total,page,page_size`).
+
+### Ticket shapes
+- `TicketRead`: `id,ticket_number,customer_id,site_id,faulty_serial_unit_id,order_item_id,warranty_id,status,priority,fault_code,issue_description,under_warranty,coverage_label,assigned_to,visit_date,work_notes,labour_hours,parts_subtotal,labour_amount,gst,total,opened_at,resolved_at,confirmed_by_name,customer_confirmed_at,charges,history`.
+- Coverage label is `Under warranty – free` or `Out of warranty – billable`. Coverage is frozen at creation using the IST date, inclusive of the warranty end date. Voided warranties provide no coverage.
+- Charge: `id,charge_type,product_id,description,quantity,customer_price,cost_amount,covered_by_warranty,amount`. `customer_price` is the unit price; `amount` is quantity × unit price before GST. Warranty customer prices and amounts are zero. Internal part cost is retained.
+- History: existing audit-entry shape `{id,action,actor_user_id,actor_name,old_data,new_data,created_at}`; actor_name may be null. Flow: `open -> assigned -> resolved -> closed`; customer rejection returns `resolved -> open`.
+
+### GET /support/search?q=
+- Roles: support, office, director. No body; q required, 1–150 characters.
+- Response 200: up to 10 results, each `{customer:{id,name,phone,email},sites:[{id,address_line1,address_line2,city,state,pincode}],orders:[{id,number,status}],units:[{serialized_unit_id,serial,product,warranty_end,warranty_status,days_left}],open_tickets:[{id,ticket_number,status}]}`.
+- Phone variants normalize to E.164; otherwise exact normalized serial, then literal name prefix. Unit status is `active|expired`; days_left is nonnegative. Missing/voided warranty is expired, with null end if no warranty exists. Empty or unmatched search returns `[]`. Common errors only.
+
+### POST /tickets
+- Roles: support, office.
+- Body: `{customer_id,serialized_unit_id?:int|null,order_item_id?:int|null,fault_code:string|null,issue_description:string,priority?:low|normal|high|urgent}`. Exactly one target required; serialized products must use serialized_unit_id. Target must belong to the customer.
+- Response 201: `TicketRead`, numbered `TKT-{id:06d}`, status open, coverage set by the server. Common errors only.
+
+### GET /tickets
+- Roles: support, manager, director, technician. No body.
+- Query: optional `status`, `assigned_to_me=false`, `page=1`, `page_size=20` (max 100).
+- Response 200: `Page[TicketRead]`, newest first. Technicians always see their own assigned tickets, even when assigned_to_me=false. Common errors only.
+
+### GET /tickets/{id}
+- Roles: support, manager, director, technician (own only). No body.
+- Response 200: `TicketRead` including charges and audit history. Common errors only.
+
+### POST /tickets/{id}/assign
+- Roles: support, manager.
+- Body: `{technician_id:int,visit_date:date}`. Technician must be active with role technician.
+- Response 200: `TicketRead`, status assigned. Errors: 409 `TICKET_STATUS_INVALID` (not open); common errors.
+
+### POST /tickets/{id}/resolve
+- Roles: support, assigned technician.
+- Body: `{work_notes:string,labour_hours:Decimal,parts:[{product_id:int,qty:Decimal}]}`. Hours >=0 (max 2 decimal places); qty >0 (max 3 decimal places); duplicate products rejected. No serialized or service products as parts.
+- Response 200: `TicketRead`, status resolved. Parts consume stock even under warranty. Billable repairs use product sale prices/GST and configured labour rate/GST, rounded per line. Reopened tickets retain earlier charges and add new work; total hours across visits must fit 999.99.
+- Errors: 409 `TICKET_STATUS_INVALID`, `INSUFFICIENT_STOCK` (names product); common errors. Unauthorized technician gets 403. All changes roll back on failure.
+
+### POST /tickets/{id}/confirm
+- Roles: support, office.
+- Body: `{confirmed:bool,customer_name:string,note?:string|null}`.
+- Response 200: `TicketRead`. True closes and records the customer's name/time. False reopens and saves name/note in audit history. This is the only endpoint that closes tickets.
+- Errors: 409 `TICKET_STATUS_INVALID` (not resolved); common errors.
+
+### GET /dashboard/summary?period=today|week|month
+- Roles: director. No body; default period month.
+- Response 200: `{period,from_at,to_at,cards,profit_per_job,unfinished_jobs,open_repairs}`.
+- `cards`: `{new_enquiries,orders_confirmed,payments_received,profit,unfinished_jobs,open_repairs}`. New enquiries counts records created in period; orders/profit use confirmed_at. Payments use completed payments paid in period. Profit covers all matching orders, even beyond the list limit.
+- `profit_per_job`: at most 50 newest confirmed orders, each `{order_number,customer,system_kw,revenue,material_cost,labour_cost,profit,margin_percent}`. Revenue excludes GST; costs use order-item and crew-rate snapshots. All money/rates/percentages are strings.
+- `unfinished_jobs`: `{order_number,customer,stage,days_open}[]`; excludes installed/completed/cancelled orders. `open_repairs`: `{ticket_number,customer,under_warranty,status,days_open}[]`; excludes closed/cancelled tickets. Both queues span all periods. Days use IST calendar dates.
+- Period starts at IST midnight, Monday, or month start and ends now. Totals are SQL aggregates. Common errors only.
+
+### POST /dashboard/share
+- Roles: director. Body: `{period:today|week|month,expires_in_hours?:int=72}` (1–168).
+- Response 201: `{id,url:"/share/<token>",expires_at}`. Save id for revocation. Token is shown only in the URL; the database stores its SHA-256 hash. Common errors only.
+
+### DELETE /dashboard/share/{id}
+- Roles: director. No body. Response 204 with no body.
+- Errors: 409 `SHARE_ALREADY_REVOKED`; common errors.
+
+### GET /public/dashboard/{token}
+- Public: no login. No body or query.
+- Response 200: same `DashboardSummary` as the director endpoint, for the shared period. Read-only.
+- Unknown, expired, and revoked tokens all return identical 404 `not_found` responses. No application rate limiter exists on the current public enquiry route to reuse; Nginx rate limits are scheduled for P3-2.
+
+Configuration added: `SERVICE_LABOUR_RATE_PER_HOUR=500`, `SERVICE_LABOUR_GST_PERCENT=18` (Settings and .env.example).
+
+## P3-2
+- POST /api/v1/auth/login: public; request {email, password}, response {user, expires_at} unchanged. Session cookie now HttpOnly, SameSite=Lax, Path=/, Secure in production. Existing authentication errors unchanged.
+- POST /api/v1/auth/logout: any authenticated role; no body; 204, now 401 without a session. Cookie deletion uses matching flags and path.
+- GET /health and existing GET /api/health: public, no body, 200 {status: "ok"}.
+- GET /health/ready and existing GET /api/health/ready: public, no body, 200 {status: "ready", database: "ok", redis: "ok"}; 503 http_error if DB or Redis fails.
+- All endpoints: unexpected 500 responses contain error {code: "internal_error", message, request_id} and X-Request-ID; exception details stay in server logs.
+- Production: same-origin requests only; Nginx adds security headers, caps request bodies at 6 MB, limits login to 5/minute (burst 5), general API to 10/second (burst 20).
+
+## P2-1
+
+### Shared shapes
+- `CrewMember`: `user_id`, `name`, `hours` (string, null until completed).
+- `ScheduleRow`: `job_id`, `status` (`planned|scheduled|in_progress|completed|cancelled`; `planned` = unscheduled), `scheduled_date` (date), `order_id`, `order_number`, `customer_name`, `customer_phone`, `site {id, address_line1, address_line2, city, state, pincode}`, `crew: CrewMember[]`.
+- `JobRead` (job sheet): `id`, `status`, `order_id`, `order_number`, `customer_name`, `customer_phone`, `site`, `scheduled_date`, `started_at`, `finished_at`, `system_kw`, `power_test_passed`, `signer_name`, `crew: CrewMember[]`, `lines: [{order_item_id, sku, name, qty, requires_serial, serials: string[]}]` (serials from the dispatch), `photo_ids: int[]`, `signature_id` (nullable).
+- `EvidenceRead`: `id`, `job_id`, `kind` (`photo|signature`), `content_type`, `size_bytes`, `created_at`.
+
+### GET /schedule
+- Roles: manager, office, director.
+- Query: `from` (date, required), `to` (date, required, >= from, max 62 days later), `page`, `page_size` (default 50, max 100).
+- Response 200: `Page[ScheduleRow]`, by date. Errors: 422 (bad range).
+
+### POST /installation-jobs/{id}/schedule
+- Roles: manager, director.
+- Body: `{"scheduled_date": "2026-11-14", "technician_ids": [int, ...]}` (1-6, duplicates ignored). Rebooking a scheduled job replaces the crew.
+- Response 200: `JobRead` (status `scheduled`).
+- Errors: 404; 409 `JOB_NOT_SCHEDULABLE` (in progress/completed/cancelled); 409 `TECHNICIAN_DOUBLE_BOOKED` (message e.g. "Ravi already has ORD-000012 on 14 Nov"); 422 date in the past (IST) or a crew member who is not an active technician (`fields.technician_ids`).
+
+### GET /installation-jobs/{id}
+- Roles: technician (only if on the crew, else 403), manager, office, director.
+- Response 200: `JobRead`.
+
+### POST /installation-jobs/{id}/start
+- Roles: technician on the crew (others 403).
+- Response 200: `JobRead` (status `in_progress`, `started_at` set).
+- Errors: 409 `JOB_STATUS_INVALID` (not scheduled), 409 `MATERIAL_NOT_DELIVERED` (dispatch not delivered).
+
+### POST /installation-jobs/{id}/photos
+- Roles: technician on the crew.
+- Body: multipart/form-data, field `file`. JPEG/PNG/WEBP detected from the file bytes (filename and Content-Type are ignored). Max 5 MB, max 10 photos per job.
+- Response 201: `EvidenceRead`.
+- Errors: 409 `JOB_STATUS_INVALID` (not in progress), 409 `PHOTO_LIMIT_REACHED`, 413 `FILE_TOO_LARGE`, 422 `FILE_TYPE_NOT_ALLOWED`.
+
+### POST /installation-jobs/{id}/complete
+- Roles: technician on the crew.
+- Body: `{"system_kw": "4.32" (0.5-50), "power_test_passed": true, "signer_name": string (2-150), "signature_png_base64": string}` (plain base64 or a `data:image/png;base64,...` URL; PNG 1 KB-500 KB).
+- Response 200: `JobRead` (status `completed`, crew `hours` filled: elapsed time rounded up to 0.25 h, min 0.25, same for every crew member). Order becomes `installed` (or `completed` if already fully paid).
+- Errors: 409 `JOB_STATUS_INVALID`, 409 `PHOTO_REQUIRED`, 422 `validation_error` (power test false, kW out of range), 422 `SIGNATURE_INVALID` (not PNG, blank canvas under 1 KB, too big, bad base64).
+
+### GET /me/today
+- Roles: technician.
+- Response 200: `{"date", "surveys": [{id, status, scheduled_at, customer_name, site}], "installation_jobs": ScheduleRow[], "ticket_visits": [{id, ticket_number, status, priority, visit_date, issue_description, customer_name, site}]}` — only the caller's items, today in Asia/Kolkata.
+
+### GET /evidence/{id}/file
+- Roles: any logged-in user. Cookie auth, so it works directly in `<img src>`.
+- Response 200: the file bytes with its stored content type. Errors: 404.
+
+### Changed
+- `GET /dashboard/summary`: `profit_per_job[].labour_cost` now fills from completed jobs (hours x snapshotted rate). No shape change.
+
+## P2-2
+
+### Shared shapes
+- `InvoiceRead` (printable): `id`, `invoice_number` (`INV/2026-27/000001`), `kind` (`order|service`), `status` (`issued`), `financial_year` (`2026-27`), `invoice_date`, `place_of_supply` (state), `seller {name, gstin, address, state}`, `buyer {customer_id, name, phone, email, gstin|null, address {id, address_line1, address_line2, city, state, pincode}}`, `order_id`, `order_number`, `ticket_id`, `ticket_number` (one of the two pairs is null), `lines: [{description, sku|null, qty, unit_price, gst_percent, taxable, gst_amount}]`, `taxable_amount`, `cgst`, `sgst`, `igst` (intra-state: cgst + sgst, igst "0.00"; inter-state: igst only), `gst_total`, `total`, `amount_paid` / `balance_due` (orders only, null for service invoices), `created_at`.
+- `InvoiceSummary` (list row): `id`, `invoice_number`, `kind`, `invoice_date`, `customer_name`, `order_id`, `ticket_id`, `taxable_amount`, `gst_total`, `total`.
+
+### GET /invoices
+- Roles: office, director.
+- Query: `kind` (optional), `from` / `to` (optional dates, inclusive), `search` (invoice number, customer name, or 4+ phone digits), `page`, `page_size` (default 20, max 100).
+- Response 200: `Page[InvoiceSummary]`, newest first.
+
+### GET /invoices/{id}
+- Roles: office, director.
+- Response 200: `InvoiceRead`. Errors: 404.
+
+### POST /orders/{id}/invoice
+- Roles: office, director. No body.
+- Creates the invoice if missing (for orders delivered before invoices existed).
+- Response 201 `InvoiceRead` when created, 200 when it already existed.
+- Errors: 404; 409 `ORDER_NOT_DELIVERED` (order not delivered/installed/completed yet).
+
+### Changed (automatic invoices, no shape change)
+- `POST /dispatches/{id}/deliver` now also creates the order's invoice in the same transaction.
+- `POST /tickets/{id}/confirm` with `confirmed: true` now also creates a service invoice when the repair is not under warranty and its total > 0.
+- No update or delete endpoints exist for invoices.
+
+## P2-3
+
+### Shared shapes
+- Subsidy statuses (DB names): `draft` (documents pending) -> `submitted` (applied) -> `under_review` (inspected) -> `approved` (sanctioned) -> `paid` (disbursed); `rejected` from any step before `paid`.
+- Document types: `electricity_bill`, `id_proof`, `bank_details`, `roof_photos`, `net_meter_application`, `installation_certificate`.
+- `SubsidyRead`: `id`, `order_id`, `order_number`, `customer_name`, `status`, `application_number`, `applied_on`, `inspected_on`, `sanctioned_amount`, `sanctioned_on`, `disbursed_amount`, `disbursed_on`, `rejection_reason`, `notes`, `documents: [{doc_type, received, received_on, has_file}]`, `missing_documents: [doc_type]`, `days_in_status`, `created_at`.
+- `SubsidyListItem`: `id`, `order_id`, `order_number`, `customer_name`, `status`, `application_number`, `missing_document_count`, `days_in_status`.
+- `PayRunSummary`: `id`, `month` (`YYYY-MM`), `status` (`pending` = draft | `paid`), `paid_on`, `payment_reference`, `technician_count`, `total_amount`.
+- `PayRunRead` = `PayRunSummary` + `lines: [PayLine]`.
+- `PayLine`: `technician_id`, `technician_name`, `install_hours`, `repair_hours`, `rate`, `install_amount`, `repair_amount`, `amount`, `jobs: [{job_id, order_number, hours, hourly_rate, amount}]`, `tickets: [{ticket_id, ticket_number, hours}]`.
+
+### GET /subsidies
+- Roles: office, director. Query: `status` (optional), `page`, `page_size` (default 20, max 100).
+- Response 200: `Page[SubsidyListItem]`, newest first.
+
+### GET /subsidies/{id}
+- Roles: office, director. Response 200 `SubsidyRead`. Errors: 404.
+
+### POST /orders/{id}/subsidy
+- Roles: office, director. No body. Creates the application (`draft`) with all 6 document rows.
+- Response 201 `SubsidyRead`. Errors: 404; 409 `SUBSIDY_EXISTS`.
+
+### PATCH /subsidies/{id}/documents/{doc_type}
+- Roles: office, director. Body `{received: bool}`.
+- Response 200 `SubsidyRead`. Errors: 404; 409 `SUBSIDY_CLOSED` (paid/rejected); 422 unknown doc_type.
+
+### POST /subsidies/{id}/documents/{doc_type}/file
+- Roles: office, director. Multipart field `file`: JPEG/PNG/WEBP/PDF (checked by content), max 5 MB. Also marks the document received.
+- Response 200 `SubsidyRead`. Errors: 404; 409 `SUBSIDY_CLOSED`; 413 `FILE_TOO_LARGE`; 422 `FILE_TYPE_NOT_ALLOWED`.
+
+### POST /subsidies/{id}/advance
+- Roles: office, director. Body `{to_status, date, application_number?, amount?, reason?}` (`date` = IST date, not in the future).
+- `submitted` needs `application_number` and all documents except `installation_certificate`; `under_review` needs the installation job completed and `installation_certificate`; `approved` needs `amount > 0`; `paid` needs `0 < amount <= sanctioned_amount`; `rejected` needs `reason`.
+- Response 200 `SubsidyRead`. Errors: 404; 409 `INVALID_SUBSIDY_STEP`, `DOCUMENTS_MISSING` (`fields` lists each missing doc_type), `INSTALLATION_NOT_COMPLETED`, `APPLICATION_NUMBER_TAKEN`; 422 validation (missing number/reason, bad amount, future date).
+
+### POST /pay-runs
+- Roles: director. Body `{month: "YYYY-MM"}`. Creates or recalculates the month draft.
+- Response 201 `PayRunRead` when created, 200 when recalculated. Errors: 409 `PAY_RUN_LOCKED` (already paid); 422 bad month.
+
+### GET /pay-runs
+- Roles: director. Query `page`, `page_size`. Response 200 `Page[PayRunSummary]`, newest month first.
+
+### GET /pay-runs/{id}
+- Roles: director. Response 200 `PayRunRead`. Errors: 404.
+
+### POST /pay-runs/{id}/mark-paid
+- Roles: director. Body `{paid_on: date, payment_reference: string}`.
+- Response 200 `PayRunRead`. Errors: 404; 409 `PAY_RUN_LOCKED`.
+
+### GET /me/pay?month=YYYY-MM
+- Roles: technician. Response 200 `{pay_run_id, month, status, paid_on, line: PayLine|null}` (own line only). Errors: 404 no run for that month; 422 bad month.
+
+### Changed
+- `POST /orders/{id}/payments`: the first payment now also creates the subsidy application (with its 6 document rows) when the enquiry had `subsidy_requested: true`. No shape change.
+
+## P2-4
+
+### POST /stock/receipts
+- Roles: warehouse, director. Body `{supplier_name, supplier_invoice_ref, received_on: date, lines: [{product_id, qty > 0, unit_cost > 0, serials?: [string]}]}` (1-100 lines).
+- Serialized products (inverter, battery, charge controller): `serials` required, one per unit (count == qty); normalized (spaces removed, uppercase). Other products: leave `serials` out.
+- Effects: units created `in_stock` / inventory increased, one stock movement per line, `products.cost_price` = line unit_cost, number `RCV-000123`.
+- Response 201 `ReceiptRead {id, receipt_number, supplier_name, supplier_invoice_ref, received_on, created_by, created_at, total, lines: [{id, product_id, sku, name, qty, unit_cost, line_total}]}`.
+- Errors: 409 `SERIAL_EXISTS` (message lists them); 422 `SERIAL_COUNT_MISMATCH`, validation_error (duplicate serials in the request, serials on a non-serial product, inactive/service product, qty/unit_cost <= 0, future date).
+
+### GET /stock/receipts?from=&to=&page=&page_size=
+- Roles: warehouse, director. `from`/`to` = received_on dates (inclusive). Response 200 `Page[ReceiptRead]`, newest first.
+
+### GET /stock/receipts/{id}
+- Roles: warehouse, director. Response 200 `ReceiptRead`. Errors: 404.
+
+### GET /stock?page=&page_size=
+- Roles: warehouse, office, director. Response 200 `Page[{product_id, sku, name, category, requires_serial, on_hand, low_stock}]`, by sku. Serialized: on_hand = units in stock, low below 5; others: low below 50. Service products excluded.
+
+### POST /tickets/{id}/replace-unit
+- Roles: support, or the assigned technician. Body `{new_serial}`. Ticket must be `assigned` and be about a serialized unit.
+- Under warranty: free (charge `customer_price` 0.00); new warranty from today with the SAME end date as the old one. Out of warranty: charge = sale price, ticket totals += price + GST; new full warranty from today.
+- Old unit -> `returned` (hidden from support unit list); new unit appears in support search (search by the new serial finds the customer).
+- Response 200 `TicketRead`. Errors: 403 not your ticket; 404 `SERIAL_NOT_FOUND`; 409 `TICKET_STATUS_INVALID`, `NO_SERIAL_UNIT`, `UNIT_ALREADY_REPLACED`, `SERIAL_NOT_IN_STOCK`, `SERIAL_WRONG_PRODUCT`; 422 bad serial format.
+
+### Changed
+- `TicketRead.charges[]` adds `replacement_unit_id` (null except for unit swaps).
+- `GET /dashboard/summary` adds `?sort=recent|profit_asc` (default recent; profit_asc = loss-making jobs first). `profit_per_job[]` adds `warranty_service_cost` (part cost + technician hours x rate for under-warranty tickets); `profit` now subtracts it. `cards` adds `stock_purchases` (sum qty x unit_cost of receipts in the period). Same fields in `GET /public/dashboard/{token}`.
+
+## P3-1
+
+No endpoint changes. New dev tooling: `python -m scripts.seed_demo` (demo customers at every stage) and `make demo-reset` / `scripts/demo_reset.ps1`. Demo logins: director@, manager@, office@, warehouse@, tech1@, tech2@, tech3@, support@ (all `@sunpower.in`); the password is DEMO_PASSWORD.
+
+## P3-3
+
+- No business endpoint, role, request body, response JSON or business error-code changes.
+- `GET /api/docs` (public, no request body, response 200 Swagger HTML): exact Nginx location now permits Swagger's jsDelivr script/style assets and inline initializer in Content-Security-Policy. Security headers remain present and the main application policy stays unchanged. No new application error codes; existing proxy rate limits apply.
+- Documentation: README with architecture/data/workflow diagrams, `docs/demo-script.md`, `docs/review-prep.md`, and `docs/fresh-clone-check.md`. Demo uses the API because frontend role pages and `/share/<token>` remain unimplemented; anonymous shares work through `GET /api/v1/public/dashboard/{token}`.
+
+## AUDIT
+
+- `GET /api/v1/users`: roles **office, manager, director, support, warehouse, admin** (manager added for crew/visit dropdowns). No request body. Optional repeated `role` query values use UserRole. Response remains an array of `{id, full_name, role, phone}` for active employees; no costs, rates, credentials or email. Errors: 401 `unauthorized`, 403 `forbidden`, 422 `validation_error`; no new codes.
+- `GET /api/v1/dashboard/summary`: roles **director, admin**. No request body; query remains `period=today|week|month` and `sort=recent|profit_asc`. Existing response `{period, from_at, to_at, cards, profit_per_job, unfinished_jobs, open_repairs}` adds two Decimal-string card fields: `advance_payments` (completed advance-type payments by paid_at) and `technician_hours` (installation crew person-hours by job completion, plus per-visit repair labour hours by charge creation). Both use the selected IST period start and exclusive current-time end. Errors unchanged: 401 `unauthorized`, 403 `forbidden`, 422 `validation_error`.
+- `GET /api/v1/public/dashboard/{token}`: **public with a valid share token**, no body. Same DashboardSummary response including the two new cards. Existing invalid/expired/revoked token response is 404 `not_found`; request validation is 422 `validation_error`. No new error codes.
+- Full role/screen/request/response/error checklist: [frontend-checklist.md](frontend-checklist.md). Captured contract: [openapi-audit.json](openapi-audit.json), obtained from **GET /api/openapi.json**. Problem coverage and honest remaining gaps: [ps-coverage.md](ps-coverage.md).
+
+## GAPS-1
+
+- Added GET `/api/v1/products` for Support, Technician, Office, Warehouse and Director (Admin override): paginated SKU/name search, optional requires_serial filter, sale/GST prices and stock, with no cost fields.
+- Office can read ticket lists and details; no new write permissions.
+- Added Office/Director GET `/api/v1/subsidies/{subsidy_id}/documents/{doc_type}/file`: stored content type and bytes, 404 not_found for absent metadata/files.
+- Added Director GET `/api/v1/dashboard/share`: paginated active links with id, period, expires_at, created_at only; no token, hash or URL.
+- Default JWT session and both environment examples now use 480 minutes (eight hours).
+- Regression tests cover permitted fields, role access, search, stock, pagination, downloads, active-link filtering and session defaults. Refreshed the live OpenAPI snapshot and affected screen guidance. No schema migration.
