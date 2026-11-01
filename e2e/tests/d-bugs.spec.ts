@@ -134,3 +134,11 @@ test('BUG-015 scan quantities have no decimal padding', async ({ page }) => {
   await expect(page.locator('[data-field]')).not.toContainText(/\/\d+\.000 scanned/)
   await expect(page.locator('[data-field]')).toContainText(/\/\d+ scanned/)
 })
+
+test('BUG-016 share expiry uses a default value without React warning', async ({ page }) => {
+  const warnings: string[] = []
+  page.on('console', msg => { if (/selected.*option|defaultValue.*value/.test(msg.text())) warnings.push(msg.text()) })
+  await openAs(page, 'director', '/director/sharing')
+  await expect(page.getByLabel('Expires after')).toHaveValue('72')
+  expect(warnings).toEqual([])
+})

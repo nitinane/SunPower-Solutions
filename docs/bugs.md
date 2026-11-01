@@ -223,7 +223,7 @@ Mobile (Test C): no horizontal page scroll on any field screen at 360x740 (tech1
 - Screenshot: (log `e2e/artifacts/log-b-director-smoke.json`)
 - Likely layer: frontend, `frontend/src/pages/director/DirectorPage.tsx` Shares.
 - PDF requirement: R18
-- Status: open
+- Status: fixed in `fix(BUG-016): set share expiry on the select`
 
 ### BUG-017 [cosmetic] Sidebar background stops partway down long pages
 - Role / screen / URL: office (any long staff page, e.g. `/office/quotes`)
